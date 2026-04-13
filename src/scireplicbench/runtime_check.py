@@ -5,9 +5,13 @@ from __future__ import annotations
 import importlib
 import os
 import shutil
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 @dataclass
@@ -44,6 +48,49 @@ def command_check(command_name: str) -> ReadinessCheck:
         ok=resolved is not None,
         detail=resolved or f"'{command_name}' is not on PATH",
     )
+
+
+def docker_engine_check(
+    command_name: str = "docker",
+    *,
+    timeout_seconds: int = 10,
+    runner: Any = subprocess.run,
+) -> ReadinessCheck:
+    """Check that the Docker CLI can reach a healthy engine."""
+
+    resolved = shutil.which(command_name)
+    if resolved is None:
+        return ReadinessCheck(
+            name="docker_engine",
+            ok=False,
+            detail=f"'{command_name}' is not on PATH",
+        )
+
+    try:
+        result = runner(
+            [command_name, "version", "--format", "{{.Server.Version}}"],
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            check=False,
+        )
+    except Exception as exc:
+        return ReadinessCheck(
+            name="docker_engine",
+            ok=False,
+            detail=f"{type(exc).__name__}: {exc}",
+        )
+
+    server_version = (result.stdout or "").strip()
+    if result.returncode == 0 and server_version:
+        return ReadinessCheck(
+            name="docker_engine",
+            ok=True,
+            detail=f"Server version {server_version}",
+        )
+
+    detail = ((result.stderr or "").strip() or server_version or f"exit code {result.returncode}")
+    return ReadinessCheck(name="docker_engine", ok=False, detail=detail.splitlines()[-1])
 
 
 def env_var_check(name: str) -> ReadinessCheck:
@@ -85,11 +132,13 @@ def sourced_env_var_check(
 
 
 def project_file_check(relative_path: str) -> ReadinessCheck:
-    path = Path(relative_path)
+    path = PROJECT_ROOT / relative_path
     return ReadinessCheck(
         name=f"file:{relative_path}",
         ok=path.exists(),
-        detail=str(path.resolve()) if path.exists() else "missing",
+        # Report the repo-relative path rather than an absolute one so the
+        # generated readiness report does not leak a user's filesystem layout.
+        detail=relative_path if path.exists() else "missing",
     )
 
 
@@ -100,8 +149,9 @@ def default_readiness_checks() -> list[ReadinessCheck]:
         python_version_check(),
         import_check("inspect_ai"),
         command_check("docker"),
-        project_file_check("scireplicbench/environments/compose.yaml"),
-        project_file_check("scireplicbench/src/scireplicbench/tasks.py"),
+        docker_engine_check(),
+        project_file_check("environments/compose.yaml"),
+        project_file_check("src/scireplicbench/tasks.py"),
     ]
 
     for env_name in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY"):
@@ -128,8 +178,10 @@ __all__ = [
     "ReadinessCheck",
     "command_check",
     "default_readiness_checks",
+    "docker_engine_check",
     "env_var_check",
     "import_check",
+    "PROJECT_ROOT",
     "project_file_check",
     "python_version_check",
     "render_readiness_markdown",

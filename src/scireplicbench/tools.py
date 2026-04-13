@@ -54,6 +54,24 @@ def scratchpad():
         action: Literal["read", "append", "replace", "clear"] = "read",
         content: str = "",
     ) -> str:
+        """
+        Read or update a persistent scratchpad file inside the sandbox.
+
+        Use this to keep multi-turn notes, plans, and intermediate results
+        in one place across agent steps. The scratchpad lives at a fixed
+        path inside the sandbox and is preserved between tool calls.
+
+        Args:
+          action (str): One of 'read', 'append', 'replace', 'clear'.
+            'read' returns current contents, 'append' adds content to the
+            end, 'replace' overwrites with content, 'clear' empties the file.
+          content (str): Text to write. Required for 'append' and 'replace';
+            ignored for 'read' and 'clear'.
+
+        Returns:
+          The current scratchpad contents (for 'read') or a short status
+          message describing the update (for write actions).
+        """
         env = sandbox()
         try:
             existing = await env.read_file(DEFAULT_SCRATCHPAD_PATH)
