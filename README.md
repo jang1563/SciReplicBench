@@ -14,7 +14,7 @@ Agents operate inside a Docker sandbox, write and execute code, install packages
 | `squidpy_spatial` | spatial statistics + image analysis | Palla et al. *Nat Methods* 2022 ([doi](https://doi.org/10.1038/s41592-021-01358-2)). External third-party anchor; datasets via `squidpy.datasets`. |
 | `genelab_benchmark` | bulk RNA-seq + classical ML + Geneformer foundation model | Leave-one-mission-out cross-validation benchmark on NASA spaceflight transcriptomics. |
 
-The inclusion of one external paper (`squidpy_spatial`) anchors judge reliability against work the author did not co-write; author relationships for the other two papers are disclosed in each paper's `paper.md`.
+The inclusion of one external paper (`squidpy_spatial`) anchors judge reliability against work the author did not co-write; per-paper author relationships and the conflict-of-interest firewall are disclosed in [AUTHORSHIP.md](AUTHORSHIP.md).
 
 ---
 
@@ -105,6 +105,6 @@ v1 is intended as a methodology prototype on three papers, not a general-purpose
 
 ---
 
-## License
+## License and citation
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). Citation metadata is provided in [CITATION.cff](CITATION.cff).

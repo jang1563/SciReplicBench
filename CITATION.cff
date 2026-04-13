@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use SciReplicBench in academic work, please cite it as below."
+title: "SciReplicBench: A PaperBench-style Inspect AI benchmark for computational reproducibility in computational biology"
+authors:
+  - family-names: Kim
+    given-names: JangKeun
+type: software
+version: "0.1.0"
+date-released: "2026-04-13"
+license: MIT
+repository-code: "https://github.com/jang1563/SciReplicBench"
+url: "https://github.com/jang1563/SciReplicBench"
+keywords:
+  - inspect-ai
+  - llm-evaluation
+  - benchmark
+  - computational-biology
+  - paperbench
+  - reproducibility
+  - agent-evaluation
