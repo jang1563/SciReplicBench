@@ -1,0 +1,1002 @@
+{
+  "paper_id": "inspiration4_multiome",
+  "title": "Single-cell multi-ome and immune profiles of the Inspiration4 crew reveal conserved, cell-type, and sex-specific responses to spaceflight",
+  "doi": "10.1038/s41467-024-49211-2",
+  "total_leaf_nodes": 90,
+  "result_match_policy": {
+    "primary_postflight_contrast": "pooled PBMC R+1 versus pooled pre-flight (L-92, L-44, L-3) unless a leaf specifies a cell type or alternate timepoint",
+    "lineage_policy": {
+      "ontology_backed_labels": [
+        "CD4 T cells",
+        "CD8 T cells",
+        "T cells, unspecified",
+        "B cells",
+        "NK cells",
+        "CD14 monocytes",
+        "CD16 monocytes",
+        "dendritic cells"
+      ],
+      "explicit_residual_bucket": "residual immune cells"
+    },
+    "metrics": {
+      "neighbor_overlap_k": 30,
+      "neighbor_overlap_min": 0.5,
+      "batch_mixing_metric": "iLISI",
+      "batch_mixing_reference_tolerance_pct": 10,
+      "marker_auc_min": 0.8,
+      "max_timepoint_proportion_shift": 0.1,
+      "lineage_marker_overlap_k": 20,
+      "lineage_marker_overlap_min": 0.35,
+      "spaceflight_signature_gene_top_k": 20,
+      "spaceflight_signature_gene_rbo_min": 0.6,
+      "pathway_rank_top_k": 15,
+      "pathway_rank_rbo_min": 0.65,
+      "motif_temporal_spearman_min": 0.8,
+      "dar_rank_top_k": 50,
+      "dar_rank_rbo_min": 0.6,
+      "rna_atac_sign_concordance_min": 0.7
+    }
+  },
+  "rubric": {
+    "id": "inspiration4_multiome/rubric",
+    "name": "Full Reproduction",
+    "weight": 1.0,
+    "is_leaf": false,
+    "children": [
+      {
+        "id": "inspiration4_multiome/code_development",
+        "name": "Code Development",
+        "weight": 0.35,
+        "is_leaf": false,
+        "children": [
+          {
+            "id": "inspiration4_multiome/code_development/input_qc",
+            "name": "Input And QC",
+            "weight": 0.18,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "inspiration4_multiome/code_development/input_qc/load_multimodal_matrix",
+                "name": "Load multimodal matrix",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Load the curated RNA+ATAC input into AnnData or MuData while preserving cell barcodes.",
+                "grading_notes": "Accept AnnData or MuData. The implementation may start from a preprocessed file rather than raw FASTQs.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/input_qc/attach_longitudinal_metadata",
+                "name": "Attach longitudinal metadata",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Represent crew member, timepoint, and modality availability in cell metadata.",
+                "grading_notes": "Metadata can be loaded from sidecar tables or embedded observation columns as long as downstream grouping is possible.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/input_qc/compute_rna_qc_metrics",
+                "name": "Compute RNA QC metrics",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Compute RNA QC metrics including detected genes, total counts, and mitochondrial fraction.",
+                "grading_notes": "Equivalent metric names are acceptable. Credit is for computing the quantities, not for exact column names.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/input_qc/compute_atac_qc_metrics",
+                "name": "Compute ATAC QC metrics",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Compute ATAC QC metrics including peak counts, nucleosome signal, and TSS enrichment or an explicit equivalent.",
+                "grading_notes": "If exact TSS enrichment is unavailable, a documented proxy only earns code-development credit, not strict result-match credit.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/input_qc/implement_qc_thresholds",
+                "name": "Implement QC thresholds",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Implement the paper-aligned RNA and ATAC QC thresholds before downstream analysis.",
+                "grading_notes": "Allow modest implementation flexibility, but the code should clearly encode thresholds near the paper values.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/input_qc/persist_filtered_object",
+                "name": "Persist filtered object",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Save the filtered multimodal object for downstream analysis and re-use.",
+                "grading_notes": "Any stable serialized format is acceptable, including h5ad, h5mu, or paired modality files.",
+                "category": "code_development"
+              }
+            ]
+          },
+          {
+            "id": "inspiration4_multiome/code_development/integration_clustering",
+            "name": "Integration And Clustering",
+            "weight": 0.22,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "inspiration4_multiome/code_development/integration_clustering/normalize_rna",
+                "name": "Normalize RNA modality",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Normalize the RNA modality using a documented single-cell normalization workflow.",
+                "grading_notes": "Accept total-count normalization plus log1p or an equivalent documented approach.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/integration_clustering/select_variable_features",
+                "name": "Select informative features",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Select highly variable RNA features and/or informative ATAC features before integration.",
+                "grading_notes": "The implementation should make the feature-selection step explicit.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/integration_clustering/build_atac_latent_space",
+                "name": "Build ATAC latent space",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Construct an ATAC latent representation such as TF-IDF plus SVD/LSI.",
+                "grading_notes": "Equivalent latent representations are acceptable if ATAC contributes to downstream structure.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/integration_clustering/apply_harmony_integration",
+                "name": "Apply Harmony or equivalent integration",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Apply Harmony or another explicit batch-correction method to reduce donor/timepoint effects.",
+                "grading_notes": "The code must document the batch variable and the integration target.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/integration_clustering/construct_joint_multimodal_latent",
+                "name": "Construct joint multimodal latent space",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Build a joint RNA+ATAC latent space using a WNN-like, MOFA+, MultiVI, or equivalently justified multimodal method.",
+                "grading_notes": "RNA-only clustering is insufficient for full credit.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/integration_clustering/compute_neighbors_and_clusters",
+                "name": "Compute neighbors and clusters",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Construct a graph on the integrated representation and run graph-based clustering.",
+                "grading_notes": "Leiden is preferred, but another graph clustering method can earn code-development credit if documented.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/integration_clustering/compute_umap",
+                "name": "Compute low-dimensional embedding",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Compute a UMAP or equivalent embedding tied to the integrated graph.",
+                "grading_notes": "The embedding should be downstream of the integrated representation, not an unrelated projection.",
+                "category": "code_development"
+              }
+            ]
+          },
+          {
+            "id": "inspiration4_multiome/code_development/annotation_composition",
+            "name": "Annotation And Composition",
+            "weight": 0.2,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "inspiration4_multiome/code_development/annotation_composition/define_annotation_strategy",
+                "name": "Define annotation strategy",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Implement a reference-mapping and/or marker-based strategy for assigning immune cell identities.",
+                "grading_notes": "CellTypist, scANVI, or marker scoring with manual curation are all acceptable at this stage.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/annotation_composition/curate_marker_panel",
+                "name": "Curate marker panel",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Use lineage-defining markers to justify the assigned immune cell labels.",
+                "grading_notes": "The marker panel should cover the benchmark lineages rather than rely on unlabeled cluster IDs.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/annotation_composition/assign_nine_lineages",
+                "name": "Assign nine benchmark lineages",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Assign the benchmark's nine immune lineages to the integrated clusters or cells.",
+                "grading_notes": "Equivalent synonyms are acceptable if they normalize cleanly to the benchmark vocabulary.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/annotation_composition/normalize_labels_to_cl_terms",
+                "name": "Normalize labels to ontology terms",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Map final lineage names to Cell Ontology-compatible labels or descendants.",
+                "grading_notes": "The code can store ontology IDs, normalized strings, or both.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/annotation_composition/quantify_cell_type_proportions",
+                "name": "Quantify cell-type proportions",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Compute cell-type proportions across timepoints and/or crew members.",
+                "grading_notes": "Any tidy summary table format is acceptable.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/annotation_composition/export_annotation_artifacts",
+                "name": "Export annotation artifacts",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write label assignments, marker evidence, and composition summaries to disk.",
+                "grading_notes": "Credit requires artifacts that a scorer could inspect later, not just notebook-only outputs.",
+                "category": "code_development"
+              }
+            ]
+          },
+          {
+            "id": "inspiration4_multiome/code_development/differential_expression_pathway",
+            "name": "Differential Expression And Pathways",
+            "weight": 0.22,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "inspiration4_multiome/code_development/differential_expression_pathway/define_longitudinal_contrasts",
+                "name": "Define longitudinal contrasts",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Specify the pre-flight versus post-flight contrasts to be tested within PBMCs and/or key cell types.",
+                "grading_notes": "The contrast table should make the timepoints explicit.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/differential_expression_pathway/run_rank_based_de",
+                "name": "Run rank-based differential expression",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Run a rank-based or equivalently justified differential expression method for the selected contrasts.",
+                "grading_notes": "Wilcoxon-style testing is preferred to mirror the paper.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/differential_expression_pathway/apply_de_thresholds",
+                "name": "Apply DEG thresholds",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Apply the paper-aligned DEG thresholds of adjusted p-value below 0.05 and absolute log2 fold change above 0.25.",
+                "grading_notes": "Minor formatting differences are fine, but the threshold logic must be explicit.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/differential_expression_pathway/generate_ranked_gene_lists",
+                "name": "Generate ranked gene lists",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Produce ranked gene lists suitable for downstream pathway analysis.",
+                "grading_notes": "Ranks may be based on statistic, signed score, or effect size if clearly documented.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/differential_expression_pathway/run_open_pathway_analysis",
+                "name": "Run open pathway analysis",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Run an open-source pathway analysis workflow such as preranked GSEA, ORA, or ssGSEA.",
+                "grading_notes": "IPA is explicitly out of scope and should not be required.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/differential_expression_pathway/export_de_pathway_artifacts",
+                "name": "Export DE and pathway artifacts",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Save differential expression tables and pathway summaries for scorer inspection.",
+                "grading_notes": "Credit requires machine-readable outputs rather than only interactive plots.",
+                "category": "code_development"
+              }
+            ]
+          },
+          {
+            "id": "inspiration4_multiome/code_development/chromatin_regulatory",
+            "name": "Chromatin And Regulatory Signals",
+            "weight": 0.18,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "inspiration4_multiome/code_development/chromatin_regulatory/identify_dars",
+                "name": "Identify differentially accessible regions",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Implement differential accessibility testing for immediate and/or recovery post-flight contrasts.",
+                "grading_notes": "The exact package can vary if the output is a ranked DAR table with signed direction.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/chromatin_regulatory/run_motif_enrichment",
+                "name": "Run motif enrichment",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Run motif enrichment on DAR sets or equivalent chromatin-derived region sets.",
+                "grading_notes": "Any documented motif database is acceptable if the workflow is reproducible.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/chromatin_regulatory/compute_motif_activity",
+                "name": "Compute motif activity",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Compute motif activity or deviation scores across timepoints and/or cell types.",
+                "grading_notes": "chromVAR-style outputs or a clearly documented proxy can earn credit.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/chromatin_regulatory/derive_gene_activity",
+                "name": "Derive gene activity",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Derive ATAC-based gene activity or promoter accessibility summaries for cross-modal interpretation.",
+                "grading_notes": "The implementation should link accessible regions back to genes.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/chromatin_regulatory/compare_rna_atac_regulation",
+                "name": "Compare RNA and ATAC regulation",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Relate chromatin-derived signals to RNA-level findings such as FOXP3 or MHC-I programs.",
+                "grading_notes": "A joined summary table, correlation analysis, or matched-sign report is acceptable.",
+                "category": "code_development"
+              },
+              {
+                "id": "inspiration4_multiome/code_development/chromatin_regulatory/export_chromatin_artifacts",
+                "name": "Export chromatin artifacts",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Save DAR, motif, and gene-activity outputs for scoring.",
+                "grading_notes": "Files should be written to disk in a stable format.",
+                "category": "code_development"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "inspiration4_multiome/execution",
+        "name": "Execution",
+        "weight": 0.25,
+        "is_leaf": false,
+        "children": [
+          {
+            "id": "inspiration4_multiome/execution/input_qc",
+            "name": "Input And QC",
+            "weight": 0.2,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "inspiration4_multiome/execution/input_qc/multimodal_input_executes",
+                "name": "Multimodal input loads without fatal error",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Execute the data-loading step without fatal errors and expose both modalities to the workflow.",
+                "grading_notes": "Transient warnings are acceptable if the step completes and produces a usable object.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/input_qc/qc_metrics_table_written",
+                "name": "QC metrics table written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write a QC metrics table or equivalent structured summary to disk.",
+                "grading_notes": "CSV, TSV, parquet, or h5ad-backed observation columns are acceptable.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/input_qc/qc_filtering_executes",
+                "name": "QC filtering executes",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Execute the filtering step without crashing and retain a non-empty dataset.",
+                "grading_notes": "The retained dataset must still support downstream analysis.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/input_qc/filtered_object_written",
+                "name": "Filtered object written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write the filtered multimodal object to disk.",
+                "grading_notes": "The file must be readable in a subsequent reproducer run.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/input_qc/qc_summary_written",
+                "name": "QC summary written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write at least one human-readable QC summary artifact such as a plot, markdown report, or summary table.",
+                "grading_notes": "The summary does not need to be pretty; it just has to be inspectable.",
+                "category": "execution"
+              }
+            ]
+          },
+          {
+            "id": "inspiration4_multiome/execution/integration_clustering",
+            "name": "Integration And Clustering",
+            "weight": 0.2,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "inspiration4_multiome/execution/integration_clustering/integration_executes",
+                "name": "Integration step executes",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Execute Harmony or an equivalent explicit integration step without fatal error.",
+                "grading_notes": "If the method is stochastic, saved seeds or explicit randomness control are preferred but not required.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/integration_clustering/multimodal_latent_written",
+                "name": "Multimodal latent representation written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write the integrated latent representation or embedding metadata to disk.",
+                "grading_notes": "This can be stored inside h5ad/h5mu or exported as a separate matrix.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/integration_clustering/cluster_labels_written",
+                "name": "Cluster labels written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write cluster assignments for the filtered cells.",
+                "grading_notes": "The scorer should be able to align labels back to cells or barcodes.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/integration_clustering/umap_coordinates_written",
+                "name": "UMAP coordinates written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write the low-dimensional embedding coordinates or a file from which they can be recovered.",
+                "grading_notes": "A saved plot alone is not sufficient if coordinates are unavailable elsewhere.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/integration_clustering/integration_report_written",
+                "name": "Integration report written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write a concise report or table describing the latent space, clustering resolution, and integration variables.",
+                "grading_notes": "This can be plain text, markdown, JSON, or YAML.",
+                "category": "execution"
+              }
+            ]
+          },
+          {
+            "id": "inspiration4_multiome/execution/annotation_composition",
+            "name": "Annotation And Composition",
+            "weight": 0.18,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "inspiration4_multiome/execution/annotation_composition/annotation_assignment_executes",
+                "name": "Annotation assignment executes",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Execute the cell-type annotation workflow without fatal error.",
+                "grading_notes": "Both reference-based and marker-based assignment paths are acceptable.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/annotation_composition/marker_evidence_written",
+                "name": "Marker evidence written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write marker-expression or marker-ranking evidence supporting the labels.",
+                "grading_notes": "A dotplot, matrix plot, or ranked marker table is acceptable.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/annotation_composition/proportions_table_written",
+                "name": "Proportions table written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write a cell-type proportion table stratified by timepoint.",
+                "grading_notes": "Crew-level stratification is optional but welcome.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/annotation_composition/annotation_visualization_written",
+                "name": "Annotation visualization written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write at least one label-aware visualization such as a UMAP colored by final lineage.",
+                "grading_notes": "The visualization may be raster or vector.",
+                "category": "execution"
+              }
+            ]
+          },
+          {
+            "id": "inspiration4_multiome/execution/differential_expression_pathway",
+            "name": "Differential Expression And Pathways",
+            "weight": 0.22,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "inspiration4_multiome/execution/differential_expression_pathway/de_job_executes",
+                "name": "Differential expression job executes",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Execute at least one longitudinal differential expression analysis without fatal error.",
+                "grading_notes": "The contrast must be explicit in the output.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/differential_expression_pathway/ranked_deg_tables_written",
+                "name": "Ranked DEG tables written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write ranked differential expression tables for the evaluated contrasts.",
+                "grading_notes": "At least one machine-readable table is required.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/differential_expression_pathway/pathway_job_executes",
+                "name": "Pathway analysis job executes",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Execute pathway analysis on at least one ranked gene list without fatal error.",
+                "grading_notes": "Open-source tools only.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/differential_expression_pathway/pathway_summary_written",
+                "name": "Pathway summary written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write a pathway summary artifact such as a table, plot, or markdown report.",
+                "grading_notes": "The scorer should be able to inspect enrichment direction and significance.",
+                "category": "execution"
+              }
+            ]
+          },
+          {
+            "id": "inspiration4_multiome/execution/chromatin_regulatory",
+            "name": "Chromatin And Regulatory Signals",
+            "weight": 0.2,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "inspiration4_multiome/execution/chromatin_regulatory/dar_job_executes",
+                "name": "DAR job executes",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Execute differential accessibility analysis without fatal error.",
+                "grading_notes": "Any valid peak-level or region-level implementation is acceptable.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/chromatin_regulatory/motif_enrichment_written",
+                "name": "Motif enrichment written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write motif-enrichment results to disk.",
+                "grading_notes": "The output should contain motif names and a ranking or significance measure.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/chromatin_regulatory/motif_activity_written",
+                "name": "Motif activity written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write motif-activity or deviation outputs to disk.",
+                "grading_notes": "A matrix, table, or summarized report is acceptable.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/chromatin_regulatory/gene_activity_written",
+                "name": "Gene activity written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write gene-activity or promoter-accessibility outputs to disk.",
+                "grading_notes": "The output must support comparison back to genes of interest.",
+                "category": "execution"
+              },
+              {
+                "id": "inspiration4_multiome/execution/chromatin_regulatory/chromatin_summary_written",
+                "name": "Chromatin summary written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write a concise summary artifact linking DARs, motifs, and RNA interpretation.",
+                "grading_notes": "This can be a markdown note, JSON summary, or a combined table.",
+                "category": "execution"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "inspiration4_multiome/result_match",
+        "name": "Result Match",
+        "weight": 0.4,
+        "is_leaf": false,
+        "children": [
+          {
+            "id": "inspiration4_multiome/result_match/input_qc",
+            "name": "Input And QC",
+            "weight": 0.17,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "inspiration4_multiome/result_match/input_qc/retained_nuclei_count_close",
+                "name": "Retained nuclei count close to reference",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The post-QC dataset retains a number of nuclei within 5% of the reference value of 151,411.",
+                "grading_notes": "Strict leaf. Compare the retained-cell count to the hidden reference count.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/input_qc/all_six_timepoints_present",
+                "name": "All six timepoints present",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The filtered dataset retains all six benchmark timepoints: L-92, L-44, L-3, R+1, R+45, and R+82.",
+                "grading_notes": "Strict leaf. Exact timepoint coverage is required.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/input_qc/all_four_crew_members_present",
+                "name": "All four crew members present",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The filtered dataset retains all four crew members after QC.",
+                "grading_notes": "Strict leaf. A missing donor fails the leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/input_qc/multimodal_retention_rate_close",
+                "name": "Multimodal retention rate close to reference",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The proportion of filtered cells with both RNA and ATAC modalities available is within 5 percentage points of the hidden reference.",
+                "grading_notes": "Compare against the reference filtered object, not the raw input.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/input_qc/median_rna_complexity_close",
+                "name": "Median RNA complexity close to reference",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Median detected genes per retained cell are within 15% of the hidden reference median.",
+                "grading_notes": "Use the filtered object and the benchmark's standardized metric definition.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/input_qc/median_mt_fraction_close",
+                "name": "Median mitochondrial fraction close to reference",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Median mitochondrial fraction after filtering is within 2 absolute percentage points of the hidden reference.",
+                "grading_notes": "This is intentionally strict because the paper uses an explicit mitochondrial cutoff.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/input_qc/qc_retention_by_timepoint_close",
+                "name": "Retention by timepoint close to reference",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The retained-cell distribution across timepoints is within 10 percentage points of the hidden reference for every timepoint.",
+                "grading_notes": "Compare normalized proportions, not raw counts alone.",
+                "category": "result_match"
+              }
+            ]
+          },
+          {
+            "id": "inspiration4_multiome/result_match/integration_clustering",
+            "name": "Integration And Clustering",
+            "weight": 0.23,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "inspiration4_multiome/result_match/integration_clustering/batch_correction_improves_structure",
+                "name": "Batch correction improves biological structure",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The integrated representation improves biological grouping relative to the unintegrated baseline, with kBET rejection reduced by at least 0.10 while cluster-label ARI remains at or above 0.60.",
+                "grading_notes": "Use the benchmark-standard unintegrated baseline and compare the integrated embedding on the same cells.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/integration_clustering/nine_major_lineages_recoverable",
+                "name": "Nine major lineages recoverable",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The final cluster structure supports recovery of the benchmark's nine immune lineages.",
+                "grading_notes": "This leaf is evaluated after label normalization, not by raw cluster IDs.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/integration_clustering/cluster_label_ari_threshold",
+                "name": "Cluster label ARI above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Ontology-normalized cluster labels achieve adjusted Rand index above 0.60 against hidden reference labels.",
+                "grading_notes": "Strict numeric comparator leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/integration_clustering/cluster_label_nmi_threshold",
+                "name": "Cluster label NMI above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Ontology-normalized cluster labels achieve normalized mutual information above 0.65 against hidden reference labels.",
+                "grading_notes": "Strict numeric comparator leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/integration_clustering/embedding_neighbor_overlap_threshold",
+                "name": "Embedding neighborhood overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The integrated embedding achieves k-nearest-neighbor overlap above 0.50 against the hidden reference graph.",
+                "grading_notes": "Use the benchmark-specified k and neighbor-overlap implementation.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/integration_clustering/batch_mixing_metric_within_band",
+                "name": "Batch-mixing metric within reference band",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The integrated embedding reaches the hidden-reference iLISI band within 10% of the benchmark reference value.",
+                "grading_notes": "Use iLISI as the default batch-mixing metric unless a task-specific override is documented.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/integration_clustering/lineage_marker_separation_recovered",
+                "name": "Lineage marker separation recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Marker-based separation of the major T, NK, B, and monocyte compartments reaches one-vs-rest marker AUC of at least 0.80 against the hidden reference.",
+                "grading_notes": "Use the benchmark marker panel and compute one-vs-rest AUCs on ontology-normalized compartments.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/integration_clustering/no_cluster_collapse",
+                "name": "No dominant cluster collapse",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "No single cluster contains more than 35% of cells unless the hidden reference exceeds that proportion.",
+                "grading_notes": "This guards against degenerate clusterings that still satisfy a few marker checks.",
+                "category": "result_match"
+              }
+            ]
+          },
+          {
+            "id": "inspiration4_multiome/result_match/annotation_composition",
+            "name": "Annotation And Composition",
+            "weight": 0.2,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "inspiration4_multiome/result_match/annotation_composition/ontology_normalized_labels_match_reference",
+                "name": "Ontology-normalized labels match reference vocabulary",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Final labels normalize cleanly to the benchmark's eight Cell Ontology-backed lineage labels plus the explicit residual bucket `residual immune cells`.",
+                "grading_notes": "Strict leaf. Unsupported free-text labels fail even if biologically plausible, but the residual bucket is permitted as a benchmark-specific non-ontology label.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/annotation_composition/label_overlap_at_k_threshold",
+                "name": "Label overlap threshold met",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "After ontology normalization, the lineage label set achieves overlap@9 of 1.0 with the hidden reference vocabulary, including the explicit residual bucket.",
+                "grading_notes": "Exact vocabulary recovery is required at the lineage level.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/annotation_composition/cd4_cd8_separation_threshold",
+                "name": "CD4 versus CD8 separation recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The submission separates CD4 and CD8 T-cell populations with F1 score above 0.75 against hidden reference labels.",
+                "grading_notes": "Numeric-first comparator leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/annotation_composition/cd14_cd16_separation_threshold",
+                "name": "CD14 versus CD16 monocyte separation recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The submission separates CD14 and CD16 monocyte populations with F1 score above 0.75 against hidden reference labels.",
+                "grading_notes": "Numeric-first comparator leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/annotation_composition/nk_t_separation_threshold",
+                "name": "NK versus T-cell separation recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The submission separates NK cells from T cells with F1 score above 0.85 against hidden reference labels.",
+                "grading_notes": "Numeric-first comparator leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/annotation_composition/cell_type_proportion_spearman_threshold",
+                "name": "Cell-type proportion profile correlated with reference",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The vector of lineage proportions across the nine immune lineages reaches Spearman rho above 0.85 versus the hidden reference.",
+                "grading_notes": "Compare proportions after ontology normalization.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/annotation_composition/proportion_stability_pattern_reproduced",
+                "name": "Major proportion stability pattern reproduced",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The submission reproduces the reference pattern that major immune cell proportions remain broadly stable across timepoints, with maximum absolute proportion shift no greater than 0.10 for each non-residual lineage.",
+                "grading_notes": "Compare timepoint-wise lineage proportions after ontology normalization.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/annotation_composition/lineage_marker_overlap_threshold",
+                "name": "Lineage marker overlap threshold met",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Average overlap@20 between submission-derived lineage markers and hidden reference markers is at least 0.35 across the major benchmark lineages.",
+                "grading_notes": "Use the same top-20 cutoff for every evaluated lineage.",
+                "category": "result_match"
+              }
+            ]
+          },
+          {
+            "id": "inspiration4_multiome/result_match/differential_expression_pathway",
+            "name": "Differential Expression And Pathways",
+            "weight": 0.22,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "inspiration4_multiome/result_match/differential_expression_pathway/foxp3_up_in_postflight_t_cells",
+                "name": "FOXP3 increases in post-flight T cells",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "At least one benchmarked post-flight T-cell contrast shows FOXP3 with positive log2 fold change and adjusted p-value below 0.05.",
+                "grading_notes": "Strict leaf anchored to a headline biological finding.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/differential_expression_pathway/mhc_class_i_suppression_recovered",
+                "name": "MHC class I suppression recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The submission recovers long-term post-flight suppression of MHC class I genes, with at least three of HLA-A, HLA-B, HLA-C, and HLA-E showing negative log2 fold change in the benchmark recovery contrast.",
+                "grading_notes": "Use the benchmark recovery contrast defined in task metadata and require adjusted p-value below 0.05 for counted genes.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/differential_expression_pathway/spaceflight_signature_gene_overlap_threshold",
+                "name": "Spaceflight-signature gene overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The ranked spaceflight-signature gene list reaches rank-biased overlap of at least 0.60 against the hidden reference over the top 20 signed genes.",
+                "grading_notes": "Use the benchmark primary post-flight contrast unless a task-specific override is documented.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/differential_expression_pathway/oxphos_enrichment_recovered",
+                "name": "Oxidative phosphorylation enrichment recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Oxidative phosphorylation is significantly enriched in the benchmark primary post-flight contrast, with normalized enrichment score greater than 0 and adjusted p-value below 0.05.",
+                "grading_notes": "Use the pooled PBMC R+1 versus pooled pre-flight contrast unless a task-specific override is documented.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/differential_expression_pathway/uv_response_enrichment_recovered",
+                "name": "UV-response enrichment recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "A UV-response pathway is significantly enriched in the expected contrast and direction.",
+                "grading_notes": "Any accepted gene-set library is allowed if mapped to the benchmark pathway family.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/differential_expression_pathway/immune_program_enrichment_recovered",
+                "name": "Immune-program enrichment recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "An immune-function pathway family highlighted by the paper is significantly enriched in the expected direction.",
+                "grading_notes": "Ontology- or library-normalized pathway matching is allowed.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/differential_expression_pathway/tcf21_program_enrichment_recovered",
+                "name": "TCF21-related enrichment recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "A TCF21-related gene program or target-set family is significantly enriched in the expected contrast and direction.",
+                "grading_notes": "Pathway-family normalization is acceptable as long as it maps to the hidden reference family.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/differential_expression_pathway/pathway_rank_overlap_threshold",
+                "name": "Pathway ranking overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The ranked pathway output for a benchmarked contrast reaches rank-biased overlap of at least 0.65 against the hidden reference over the top 15 pathway families.",
+                "grading_notes": "Compare pathway-family-normalized outputs, not raw library-specific names alone.",
+                "category": "result_match"
+              }
+            ]
+          },
+          {
+            "id": "inspiration4_multiome/result_match/chromatin_regulatory",
+            "name": "Chromatin And Regulatory Signals",
+            "weight": 0.18,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "inspiration4_multiome/result_match/chromatin_regulatory/expected_tf_motif_recovery",
+                "name": "Expected TF motifs recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The submission recovers at least four expected R+1-associated motifs from the benchmark motif set that includes SPIB, SPI1, CEBPD, SPIC, EHF, CEBPA, ELF3, IKZF1, EWSR1-FLI1, FOSL2, and KLF4.",
+                "grading_notes": "Strict motif-membership leaf with family normalization allowed.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/chromatin_regulatory/rplus1_motif_activity_peak_reproduced",
+                "name": "R+1 motif-activity peak reproduced",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The submission reproduces the pattern that motif activity is strongest at R+1 and attenuates toward later recovery timepoints, with temporal profile Spearman rho of at least 0.80 against the hidden reference across the benchmark motif set.",
+                "grading_notes": "Use the fixed benchmark motif panel and timepoint order.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/chromatin_regulatory/dar_rank_overlap_threshold",
+                "name": "DAR ranking overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The ranked DAR output for a benchmarked contrast reaches rank-biased overlap of at least 0.60 against the hidden reference over the top 50 regions or linked genes.",
+                "grading_notes": "Use the benchmark primary post-flight contrast unless a task-specific override is documented.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/chromatin_regulatory/rna_atac_sign_concordance_threshold",
+                "name": "RNA and ATAC sign concordance above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The submission reaches sign concordance of at least 0.70 between RNA and ATAC-derived regulatory summaries across the benchmark key-gene panel.",
+                "grading_notes": "Use the fixed benchmark panel and count a gene as concordant when RNA and ATAC effects share the same sign.",
+                "category": "result_match"
+              },
+              {
+                "id": "inspiration4_multiome/result_match/chromatin_regulatory/regulatory_signal_consistency",
+                "name": "Regulatory signal consistency recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "A benchmarked regulatory signal, such as FOXP3-associated accessibility or another hidden-reference immune-regulatory program, is recovered with the correct direction of change in at least 80% of the fixed benchmark panel.",
+                "grading_notes": "Use the hidden reference panel selected by the benchmark author; the scorer should compare direction only, not raw magnitude.",
+                "category": "result_match"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "squidpy_spatial_main",
+    "paper_id": "squidpy_spatial",
+    "paper_title": "Squidpy spatial omics workflow",
+    "task_brief": "Reproduce the public Squidpy spatial-omics workflow using the benchmark-pinned built-in datasets, graph statistics, image features, and structured output contracts.",
+    "analysis_focus": [
+      "load the benchmark-pinned Squidpy built-in datasets and image assets",
+      "construct geometry-aware spatial graphs and recover neighborhood, interaction, and autocorrelation outputs",
+      "compute image-derived features and relate them back to transcriptomic structure",
+      "stage a reproducible submission that a fresh reproducer container can rerun without internet access"
+    ],
+    "required_outputs": [
+      "/workspace/submission/run.sh",
+      "/workspace/submission/README.md",
+      "/workspace/output/agent/dataset_manifest.json",
+      "/workspace/output/agent/spatial_graph_metrics.json",
+      "/workspace/output/agent/autocorrelation/geary_ranked.tsv",
+      "/workspace/output/agent/image_features/feature_matrix.tsv",
+      "/workspace/output/submission_manifest.json"
+    ],
+    "success_checks": [
+      "the workflow respects dataset geometry instead of treating all coordinates identically",
+      "ranked statistic tables are emitted in stable TSV or JSON formats",
+      "image-derived outputs are connected back to the observation-level analysis",
+      "the built-in dataset manifest is referenced when exact public tutorial shapes differ by version"
+    ],
+    "public_data_sources": [
+      "https://github.com/scverse/squidpy",
+      "public datasets distributed through squidpy.datasets",
+      "benchmark-pinned dataset snapshots staged under the paper bundle"
+    ],
+    "reviewer_path": "Use benchmark-pinned built-in dataset snapshots when present. If they have not been staged yet, use data/prepare_data.sh to prefetch them and create a dataset manifest before attempting a full run.",
+    "novel_contrast_id": "visium_hne_hidden_geary_rank",
+    "primary_output_root": "/workspace/output/agent",
+    "agent_limits": {
+      "message_limit": 50,
+      "time_limit_minutes": 60,
+      "working_limit_minutes": 60
+    },
+    "resource_hints": {
+      "cpu_limit": "2.0",
+      "memory_limit": "8g"
+    }
+  }
+]

@@ -1,0 +1,37 @@
+services:
+  agent:
+    build:
+      context: ..
+      dockerfile: environments/Dockerfile
+      args:
+        REQUIREMENTS_FILE: environments/requirements.genelab_benchmark.txt
+    init: true
+    command: ["tail", "-f", "/dev/null"]
+    working_dir: /workspace
+    x-default: true
+    network_mode: "none"
+    cpus: "${SAMPLE_METADATA_CPU_LIMIT:-2.0}"
+    mem_limit: "${SAMPLE_METADATA_MEMORY_LIMIT:-8g}"
+    volumes:
+      - scireplicbench-submission:/workspace/submission
+      - scireplicbench-output:/workspace/output
+
+  reproducer:
+    build:
+      context: ..
+      dockerfile: environments/Dockerfile
+      args:
+        REQUIREMENTS_FILE: environments/requirements.genelab_benchmark.txt
+    init: true
+    command: ["tail", "-f", "/dev/null"]
+    working_dir: /workspace
+    network_mode: "none"
+    cpus: "${SAMPLE_METADATA_CPU_LIMIT:-2.0}"
+    mem_limit: "${SAMPLE_METADATA_MEMORY_LIMIT:-8g}"
+    volumes:
+      - scireplicbench-submission:/workspace/submission:ro
+      - scireplicbench-output:/workspace/output
+
+volumes:
+  scireplicbench-submission:
+  scireplicbench-output:

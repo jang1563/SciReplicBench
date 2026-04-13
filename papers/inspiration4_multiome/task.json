@@ -1,0 +1,46 @@
+[
+  {
+    "id": "inspiration4_multiome_main",
+    "paper_id": "inspiration4_multiome",
+    "paper_title": "Inspiration4 single-cell multi-ome",
+    "task_brief": "Reproduce the benchmark paper package for the Inspiration4 PBMC single-cell multi-ome study using the staged multimodal inputs, paper instructions, and rubric constraints.",
+    "analysis_focus": [
+      "load the benchmark-prepared multimodal RNA and ATAC inputs when available",
+      "run QC, latent-space construction, clustering, annotation, differential expression, and pathway analysis",
+      "recover major longitudinal post-flight findings in structured tables rather than screenshots",
+      "leave a fresh-container-rerunnable submission under /workspace/submission"
+    ],
+    "required_outputs": [
+      "/workspace/submission/run.sh",
+      "/workspace/submission/README.md",
+      "/workspace/output/agent/metrics.json",
+      "/workspace/output/agent/lineage_annotations.tsv",
+      "/workspace/output/agent/de/primary_contrast.tsv",
+      "/workspace/output/agent/pathways/primary_contrast.tsv",
+      "/workspace/output/submission_manifest.json"
+    ],
+    "success_checks": [
+      "the submission can be rerun from files staged under /workspace/submission",
+      "all core tables are machine-readable and named predictably",
+      "missing benchmark-author data dependencies are documented explicitly if they block a full run",
+      "the held-out contrast is addressed or staged without inventing hidden-reference values"
+    ],
+    "public_data_sources": [
+      "https://github.com/eliah-o/inspiration4-omics",
+      "NASA OSDR and GEO assets referenced by the paper package",
+      "benchmark-prepared AnnData or MuData inputs staged under the paper bundle"
+    ],
+    "reviewer_path": "Prefer benchmark-prepared AnnData or MuData inputs. If those files are absent, stage the workflow with data/prepare_data.sh and document the remaining acquisition step rather than fabricating biological outputs.",
+    "novel_contrast_id": "cd14_monocyte_recovery_rplus45_vs_lminus44",
+    "primary_output_root": "/workspace/output/agent",
+    "agent_limits": {
+      "message_limit": 60,
+      "time_limit_minutes": 90,
+      "working_limit_minutes": 90
+    },
+    "resource_hints": {
+      "cpu_limit": "2.0",
+      "memory_limit": "8g"
+    }
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "schema_version": "0.1.0",
+  "description": "Paired human and judge leaf-level grades for reliability analysis. Target n >= 150 before claiming stable judge agreement.",
+  "fields": {
+    "example_id": "Unique grading example identifier, usually paper_id + leaf_id + run_id",
+    "paper_id": "Benchmark paper identifier",
+    "leaf_id": "Path-based rubric leaf identifier",
+    "human_scores": "Object mapping human rater IDs to binary scores",
+    "judge_scores": "Object mapping judge model IDs to binary scores",
+    "metadata": "Optional object with run_id, evidence_quote_present, notes, or calibration tags"
+  },
+  "human_grades": []
+}

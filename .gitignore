@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# API keys / secrets
+.env
+.env.local
+*.pem
+*.key
+.api_keys
+configs/runtime.env
+
+# Inspect AI / evaluation artifacts
+logs/
+logs-smoke/
+logs-*/
+.inspect/
+*.eval
+eval_logs/
+submissions/
+
+# Docker state
+.docker-state/
+
+# Data and model artifacts (large, regenerated per run)
+papers/*/data/*
+!papers/*/data/prepare_data.sh
+papers/*/reference_outputs/*
+!papers/*/reference_outputs/.gitkeep
+*.h5ad
+*.h5
+*.loom
+*.mtx
+*.bam
+*.bai
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+
+# Local dev scratch
+scratch/
+tmp/
+*.log

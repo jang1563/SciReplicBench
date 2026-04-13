@@ -1,0 +1,760 @@
+{
+  "paper_id": "squidpy_spatial",
+  "title": "Squidpy: a scalable framework for spatial omics analysis",
+  "doi": "10.1038/s41592-021-01358-2",
+  "total_leaf_nodes": 65,
+  "result_match_policy": {
+    "dataset_snapshot_policy": "compare only against benchmark-pinned dataset and image manifests, not an unpinned live Squidpy installation",
+    "metrics": {
+      "graph_edge_count_tolerance_pct": 2,
+      "rank_top_k_default": 20,
+      "rank_rbo_min_default": 0.65,
+      "centrality_spearman_min": 0.8,
+      "curve_pearson_min": 0.85,
+      "ripley_curve_pearson_min": 0.9,
+      "svg_count_tolerance_pct": 15,
+      "image_feature_count_tolerance_pct": 10,
+      "segmentation_feature_count_tolerance_pct": 20,
+      "image_cluster_ari_min": 0.25,
+      "interaction_count_tolerance_pct": 25,
+      "regionwise_localization_pearson_min": 0.6
+    }
+  },
+  "rubric": {
+    "id": "squidpy_spatial/rubric",
+    "name": "Full Reproduction",
+    "weight": 1.0,
+    "is_leaf": false,
+    "children": [
+      {
+        "id": "squidpy_spatial/code_development",
+        "name": "Code Development",
+        "weight": 0.3,
+        "is_leaf": false,
+        "children": [
+          {
+            "id": "squidpy_spatial/code_development/datasets_and_containers",
+            "name": "Datasets And Containers",
+            "weight": 0.2,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "squidpy_spatial/code_development/datasets_and_containers/load_visium_dataset",
+                "name": "Load Visium H&E dataset",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Load the official Visium H&E AnnData object from Squidpy and preserve its observation and variable metadata.",
+                "grading_notes": "The benchmark should use the official built-in dataset rather than a lookalike local export.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/datasets_and_containers/load_seqfish_dataset",
+                "name": "Load seqFISH dataset",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Load an official generic-coordinate dataset such as seqFISH for cell-level spatial analyses.",
+                "grading_notes": "The implementation should make clear that this dataset is used for non-grid spatial statistics.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/datasets_and_containers/attach_spatial_coordinates",
+                "name": "Attach spatial coordinates",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Preserve or expose the spatial coordinates in the expected Squidpy-compatible location.",
+                "grading_notes": "Coordinates may live in AnnData obsm or an equivalent documented structure.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/datasets_and_containers/load_image_container",
+                "name": "Load histology image container",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Load the Visium H&E image through a Squidpy-compatible image container workflow.",
+                "grading_notes": "Image loading must be explicit if the submission later claims image features.",
+                "category": "code_development"
+              }
+            ]
+          },
+          {
+            "id": "squidpy_spatial/code_development/spatial_graph_neighbors",
+            "name": "Spatial Graphs And Neighborhoods",
+            "weight": 0.25,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "squidpy_spatial/code_development/spatial_graph_neighbors/construct_geometry_aware_graph",
+                "name": "Construct geometry-aware spatial graph",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Construct a spatial-neighbor graph using geometry-aware settings appropriate to the chosen assay.",
+                "grading_notes": "Grid-like and generic-coordinate data should not be treated identically without justification.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/spatial_graph_neighbors/parameterize_graph_builder",
+                "name": "Parameterize graph builder",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Set graph-construction parameters such as coord_type, radius, or Delaunay usage explicitly.",
+                "grading_notes": "The benchmark rewards explicit handling of graph assumptions.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/spatial_graph_neighbors/run_neighborhood_enrichment",
+                "name": "Run neighborhood enrichment",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Compute neighborhood enrichment on a cluster or cell-type annotation.",
+                "grading_notes": "The implementation should produce a z-score style neighborhood-enrichment result.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/spatial_graph_neighbors/run_centrality_or_interaction",
+                "name": "Run centrality or interaction summary",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Compute a cluster-level graph summary such as centrality scores or an interaction matrix.",
+                "grading_notes": "At least one graph-derived cluster summary is required.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/spatial_graph_neighbors/run_cooccurrence",
+                "name": "Run co-occurrence analysis",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Compute cluster co-occurrence across increasing spatial radii.",
+                "grading_notes": "The output should preserve the radius-dependent structure rather than collapse to a single score.",
+                "category": "code_development"
+              }
+            ]
+          },
+          {
+            "id": "squidpy_spatial/code_development/spatial_statistics",
+            "name": "Spatial Statistics",
+            "weight": 0.22,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "squidpy_spatial/code_development/spatial_statistics/run_moran_or_geary",
+                "name": "Run Moran or Geary statistics",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Compute spatial autocorrelation statistics such as Moran's I or Geary's C on the benchmark dataset.",
+                "grading_notes": "At least one gene-level spatial-autocorrelation workflow is required.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/spatial_statistics/rank_spatial_genes",
+                "name": "Rank spatially variable genes",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Produce a ranked table of spatially variable genes with multiple-testing correction.",
+                "grading_notes": "The ranking should be machine-readable and reproducible.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/spatial_statistics/run_ripley",
+                "name": "Run Ripley statistics",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Compute a Ripley family statistic for a labeled cell-type or cluster pattern.",
+                "grading_notes": "Ripley L, K, F, or G are acceptable if documented.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/spatial_statistics/compare_pattern_regimes",
+                "name": "Compare clustered versus dispersed regimes",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Interpret whether the observed spatial pattern is clustered, dispersed, or close to random at one or more scales.",
+                "grading_notes": "This can be a table, text summary, or plotted statistic.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/spatial_statistics/export_spatial_statistics",
+                "name": "Export spatial-statistics artifacts",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write spatial-statistics tables and summaries to disk.",
+                "grading_notes": "Credit requires durable outputs rather than notebook-only display.",
+                "category": "code_development"
+              }
+            ]
+          },
+          {
+            "id": "squidpy_spatial/code_development/image_features_segmentation",
+            "name": "Image Features And Segmentation",
+            "weight": 0.18,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "squidpy_spatial/code_development/image_features_segmentation/compute_image_features",
+                "name": "Compute image features",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Compute one or more image-feature families such as summary, texture, or segmentation-derived features.",
+                "grading_notes": "The feature family should be named explicitly.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features",
+                "name": "Compute segmentation-derived features",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Compute segmentation-derived region properties or an equivalent cell-shape summary.",
+                "grading_notes": "The benchmark accepts pre-existing segmentation labels or benchmark-generated labels.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/image_features_segmentation/join_image_features_to_adata",
+                "name": "Join image features to observations",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Join the image-derived features back to the expression object or a keyed table aligned to observations.",
+                "grading_notes": "The scorer must be able to line up features with spots or cells.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/image_features_segmentation/compare_image_and_expression_structure",
+                "name": "Compare image and expression structure",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Compare image-derived structure with transcriptomic clusters using a clustering or similarity analysis.",
+                "grading_notes": "An ARI, NMI, or similar metric is acceptable.",
+                "category": "code_development"
+              }
+            ]
+          },
+          {
+            "id": "squidpy_spatial/code_development/interaction_reporting",
+            "name": "Interactions And Reporting",
+            "weight": 0.15,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "squidpy_spatial/code_development/interaction_reporting/run_ligrec_or_equivalent",
+                "name": "Run ligand-receptor or equivalent interaction analysis",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Run Squidpy ligand-receptor analysis or another documented interaction-style summary supported by the benchmark.",
+                "grading_notes": "The benchmark focuses on reproducible ranked interactions rather than exhaustive downstream biology.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/interaction_reporting/select_marker_genes_for_visualization",
+                "name": "Select marker genes for visualization",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Choose marker or spatially variable genes to visualize on the tissue or cell map.",
+                "grading_notes": "The gene-selection strategy should be explicit.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/interaction_reporting/generate_spatial_visualizations",
+                "name": "Generate spatial visualizations",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Generate spatial scatter or image-overlay plots tied to the analysis outputs.",
+                "grading_notes": "A plot alone is not enough for result-match credit, but it is required here.",
+                "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/interaction_reporting/export_reproducible_summary",
+                "name": "Export reproducible summary",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write a concise reproducible report summarizing datasets, graph settings, and key findings.",
+                "grading_notes": "Markdown, JSON, or YAML are all acceptable.",
+                "category": "code_development"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "squidpy_spatial/execution",
+        "name": "Execution",
+        "weight": 0.25,
+        "is_leaf": false,
+        "children": [
+          {
+            "id": "squidpy_spatial/execution/datasets_and_containers",
+            "name": "Datasets And Containers",
+            "weight": 0.18,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes",
+                "name": "Visium dataset loads without fatal error",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Load the benchmarked Visium dataset without fatal error.",
+                "grading_notes": "Warnings are acceptable if the resulting object is usable.",
+                "category": "execution"
+              },
+              {
+                "id": "squidpy_spatial/execution/datasets_and_containers/seqfish_dataset_executes",
+                "name": "seqFISH dataset loads without fatal error",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Load the benchmarked generic-coordinate dataset without fatal error.",
+                "grading_notes": "The dataset must preserve labels and coordinates.",
+                "category": "execution"
+              },
+              {
+                "id": "squidpy_spatial/execution/datasets_and_containers/image_container_executes",
+                "name": "Image container loads without fatal error",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Load the image container and make it available for downstream feature extraction.",
+                "grading_notes": "The image may be lazy-loaded but must be usable later.",
+                "category": "execution"
+              }
+            ]
+          },
+          {
+            "id": "squidpy_spatial/execution/spatial_graph_neighbors",
+            "name": "Spatial Graphs And Neighborhoods",
+            "weight": 0.25,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "squidpy_spatial/execution/spatial_graph_neighbors/spatial_graph_written",
+                "name": "Spatial graph artifacts written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write graph connectivity artifacts or an AnnData object containing them.",
+                "grading_notes": "The scorer should be able to verify that a graph was actually computed.",
+                "category": "execution"
+              },
+              {
+                "id": "squidpy_spatial/execution/spatial_graph_neighbors/nhood_enrichment_written",
+                "name": "Neighborhood enrichment written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write neighborhood-enrichment results to disk.",
+                "grading_notes": "Expected outputs include z-scores or an equivalent matrix.",
+                "category": "execution"
+              },
+              {
+                "id": "squidpy_spatial/execution/spatial_graph_neighbors/centrality_or_interaction_written",
+                "name": "Centrality or interaction summary written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write a centrality or cluster-interaction summary to disk.",
+                "grading_notes": "At least one graph-derived cluster summary is required.",
+                "category": "execution"
+              },
+              {
+                "id": "squidpy_spatial/execution/spatial_graph_neighbors/cooccurrence_written",
+                "name": "Co-occurrence results written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write co-occurrence results across radii to disk.",
+                "grading_notes": "The output must preserve the radius dimension.",
+                "category": "execution"
+              }
+            ]
+          },
+          {
+            "id": "squidpy_spatial/execution/spatial_statistics",
+            "name": "Spatial Statistics",
+            "weight": 0.22,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "squidpy_spatial/execution/spatial_statistics/moran_geary_written",
+                "name": "Moran or Geary results written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write spatial-autocorrelation results to disk.",
+                "grading_notes": "A ranked table is preferred.",
+                "category": "execution"
+              },
+              {
+                "id": "squidpy_spatial/execution/spatial_statistics/top_svg_table_written",
+                "name": "Top spatial-gene table written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write a machine-readable table of top spatially variable genes.",
+                "grading_notes": "CSV, TSV, parquet, or AnnData uns exports are acceptable.",
+                "category": "execution"
+              },
+              {
+                "id": "squidpy_spatial/execution/spatial_statistics/ripley_written",
+                "name": "Ripley statistics written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write Ripley statistics to disk.",
+                "grading_notes": "The output may be a table, serialized object, or plotted summary with underlying data.",
+                "category": "execution"
+              },
+              {
+                "id": "squidpy_spatial/execution/spatial_statistics/spatial_stats_plot_written",
+                "name": "Spatial-statistics plot written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write at least one plot tied to the spatial-statistics results.",
+                "grading_notes": "The plot may be raster or vector.",
+                "category": "execution"
+              }
+            ]
+          },
+          {
+            "id": "squidpy_spatial/execution/image_features_segmentation",
+            "name": "Image Features And Segmentation",
+            "weight": 0.2,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "squidpy_spatial/execution/image_features_segmentation/image_feature_job_executes",
+                "name": "Image-feature job executes",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Execute image-feature extraction without fatal error.",
+                "grading_notes": "The job must produce a non-empty feature table.",
+                "category": "execution"
+              },
+              {
+                "id": "squidpy_spatial/execution/image_features_segmentation/segmentation_features_written",
+                "name": "Segmentation features written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write segmentation-derived features or region properties to disk.",
+                "grading_notes": "The benchmark accepts benchmark-provided segmentation labels if documented.",
+                "category": "execution"
+              },
+              {
+                "id": "squidpy_spatial/execution/image_features_segmentation/integrated_feature_matrix_written",
+                "name": "Integrated feature matrix written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write the joined image-plus-expression feature matrix or equivalent aligned table.",
+                "grading_notes": "The scorer must be able to align features to observations.",
+                "category": "execution"
+              }
+            ]
+          },
+          {
+            "id": "squidpy_spatial/execution/interaction_reporting",
+            "name": "Interactions And Reporting",
+            "weight": 0.15,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "squidpy_spatial/execution/interaction_reporting/interaction_analysis_executes",
+                "name": "Interaction analysis executes",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Execute the interaction-analysis branch without fatal error.",
+                "grading_notes": "Ligand-receptor analysis or a benchmark-approved equivalent is acceptable.",
+                "category": "execution"
+              },
+              {
+                "id": "squidpy_spatial/execution/interaction_reporting/visualization_report_written",
+                "name": "Visualization report written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write the final visualization/reporting artifacts to disk.",
+                "grading_notes": "The report should mention datasets and major outputs.",
+                "category": "execution"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "squidpy_spatial/result_match",
+        "name": "Result Match",
+        "weight": 0.45,
+        "is_leaf": false,
+        "children": [
+          {
+            "id": "squidpy_spatial/result_match/datasets_and_containers",
+            "name": "Datasets And Containers",
+            "weight": 0.12,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "squidpy_spatial/result_match/datasets_and_containers/visium_shape_within_tolerance",
+                "name": "Visium shape within tolerance",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The loaded Visium H&E dataset has observation and gene counts within 1% of the official built-in dataset shape.",
+                "grading_notes": "Use the benchmark-pinned dataset manifest rather than a drifting library-version-dependent shape.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/datasets_and_containers/seqfish_shape_within_tolerance",
+                "name": "seqFISH shape within tolerance",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The loaded seqFISH dataset has observation and gene counts within 1% of the official built-in dataset shape.",
+                "grading_notes": "Use the benchmark-pinned dataset manifest rather than a drifting library-version-dependent shape.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/datasets_and_containers/image_shape_within_tolerance",
+                "name": "Image shape within tolerance",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The loaded Visium H&E image dimensions are within 2% of the benchmark reference image shape.",
+                "grading_notes": "This guards against loading the wrong image asset or a cropped surrogate.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/datasets_and_containers/label_vocabulary_matches_reference",
+                "name": "Label vocabulary matches reference",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The cluster or cell-type label vocabulary for the benchmark dataset matches the hidden reference after normalization.",
+                "grading_notes": "Ontology-style normalization of labels is allowed if a dataset uses synonyms.",
+                "category": "result_match"
+              }
+            ]
+          },
+          {
+            "id": "squidpy_spatial/result_match/spatial_graph_neighbors",
+            "name": "Spatial Graphs And Neighborhoods",
+            "weight": 0.33,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "squidpy_spatial/result_match/spatial_graph_neighbors/visium_graph_edge_count_band",
+                "name": "Visium graph edge count within reference band",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The Visium spatial graph edge count lies within 2% of the benchmark-pinned hidden reference.",
+                "grading_notes": "Compare after the benchmark-standard graph-construction settings are applied.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/spatial_graph_neighbors/seqfish_graph_edge_count_band",
+                "name": "seqFISH graph edge count within reference band",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The seqFISH spatial graph edge count lies within 2% of the benchmark-pinned hidden reference.",
+                "grading_notes": "Compare after the benchmark-standard graph-construction settings are applied.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/spatial_graph_neighbors/nhood_enrichment_rank_overlap",
+                "name": "Neighborhood-enrichment ranking overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The ranked neighborhood-enrichment pairs reach rank-biased overlap of at least 0.65 against the hidden reference over the top 20 cluster pairs.",
+                "grading_notes": "Use the benchmark-standard neighborhood-enrichment ranking and pair normalization.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/spatial_graph_neighbors/positive_neighbor_pair_recovered",
+                "name": "Expected positive neighbor pair recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "At least one expected high-enrichment pair from the benchmark reference set is recovered among the top-ranked neighborhood pairs.",
+                "grading_notes": "The hidden reference set is derived from the paper's canonical spatial associations.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/spatial_graph_neighbors/centrality_ranking_overlap_threshold",
+                "name": "Centrality ranking overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The ranked centrality summary for the benchmark cell types or clusters reaches Spearman rho of at least 0.80 against the hidden reference.",
+                "grading_notes": "Compare the ordered centrality scores after aligning normalized cluster labels.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/spatial_graph_neighbors/cooccurrence_curve_overlap_threshold",
+                "name": "Co-occurrence curve overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The benchmark co-occurrence curve reaches mean Pearson correlation of at least 0.85 against the hidden reference across the fixed benchmark radius grid.",
+                "grading_notes": "Use the benchmark's fixed radius grid and compare matched cluster-pair curves.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/spatial_graph_neighbors/interaction_matrix_overlap_threshold",
+                "name": "Interaction-matrix overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The cluster-interaction matrix or equivalent summary reaches Spearman rho of at least 0.80 against the hidden reference after vectorizing the upper triangle.",
+                "grading_notes": "Numeric-first comparator leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/spatial_graph_neighbors/known_spatial_association_recovered",
+                "name": "Known spatial association recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "A benchmarked paper-consistent spatial association such as an embryonic lineage adjacency is recovered with the correct sign and ranking direction.",
+                "grading_notes": "The pair is benchmark-pinned and should appear among the top five positive neighborhood-enrichment pairs.",
+                "category": "result_match"
+              }
+            ]
+          },
+          {
+            "id": "squidpy_spatial/result_match/spatial_statistics",
+            "name": "Spatial Statistics",
+            "weight": 0.25,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "squidpy_spatial/result_match/spatial_statistics/top_moran_genes_overlap_threshold",
+                "name": "Top Moran genes overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The top Moran-ranked genes on the benchmark Visium dataset reach rank-biased overlap of at least 0.70 against the hidden reference over the top 20 genes.",
+                "grading_notes": "Numeric-first comparator leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/spatial_statistics/olfm1_moran_close",
+                "name": "Olfm1 Moran statistic close to reference",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The Moran's I value for Olfm1 is within 0.05 of the benchmark reference value.",
+                "grading_notes": "The reference value is derived from the official tutorial output.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/spatial_statistics/plp1_moran_close",
+                "name": "Plp1 Moran statistic close to reference",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The Moran's I value for Plp1 is within 0.05 of the benchmark reference value.",
+                "grading_notes": "The reference value is derived from the official tutorial output.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold",
+                "name": "Geary ranking overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The top Geary-ranked genes reach rank-biased overlap of at least 0.65 against the hidden reference over the top 20 genes.",
+                "grading_notes": "Numeric-first comparator leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/spatial_statistics/ripley_curve_overlap_threshold",
+                "name": "Ripley curve overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The benchmark Ripley statistic curve reaches Pearson correlation of at least 0.90 against the hidden reference across the fixed benchmark radius grid.",
+                "grading_notes": "Use the benchmark's fixed radius grid and matched statistic family.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/spatial_statistics/svg_fdr_count_within_band",
+                "name": "Spatial-gene FDR count within reference band",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The number of significant spatially variable genes lies within 15% of the hidden reference after the benchmark-standard multiple-testing correction.",
+                "grading_notes": "Compare counts after the benchmark-standard multiple-testing correction.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/spatial_statistics/spatial_localization_pattern_recovered",
+                "name": "Spatial localization pattern recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "At least one benchmarked top spatial gene shows the correct broad localization pattern against the hidden reference.",
+                "grading_notes": "This leaf is graded with region-wise Pearson correlation of at least 0.60 after benchmark-standard spatial binning, not free-form image matching.",
+                "category": "result_match"
+              }
+            ]
+          },
+          {
+            "id": "squidpy_spatial/result_match/image_features_segmentation",
+            "name": "Image Features And Segmentation",
+            "weight": 0.18,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "squidpy_spatial/result_match/image_features_segmentation/image_feature_matrix_dimensionality_band",
+                "name": "Image-feature matrix dimensionality within band",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The image-feature matrix has exact row alignment to the hidden reference and a feature count within 10% of the benchmark-pinned reference.",
+                "grading_notes": "Compare both row alignment and feature dimensionality.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/image_features_segmentation/segmentation_feature_count_band",
+                "name": "Segmentation feature count within band",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The number of segmentation-derived features or labels lies within 20% of the hidden reference.",
+                "grading_notes": "The benchmark accepts either benchmark-generated or benchmark-supplied segmentation labels.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/image_features_segmentation/image_feature_cluster_alignment_ari",
+                "name": "Image-feature cluster alignment above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Clustering based on image-derived features reaches ARI of at least 0.25 against hidden-reference transcriptomic clusters or benchmark image clusters.",
+                "grading_notes": "Numeric-first comparator leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/image_features_segmentation/texture_feature_rank_overlap",
+                "name": "Texture or summary feature ranking overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The ranked image features for a benchmark task reach rank-biased overlap of at least 0.60 against the hidden reference over the top 10 features.",
+                "grading_notes": "Numeric-first comparator leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/image_features_segmentation/image_feature_structure_nondegenerate",
+                "name": "Image-feature structure nondegenerate",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The image-derived clustering is informative but nondegenerate relative to the hidden reference, with at least three non-empty clusters and no single cluster containing more than 60% of observations.",
+                "grading_notes": "This leaf fails collapsed or trivially identical clusterings.",
+                "category": "result_match"
+              }
+            ]
+          },
+          {
+            "id": "squidpy_spatial/result_match/interaction_reporting",
+            "name": "Interactions And Reporting",
+            "weight": 0.12,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "squidpy_spatial/result_match/interaction_reporting/ligrec_top_pair_overlap_threshold",
+                "name": "Top interaction pairs overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The ranked interaction pairs reach rank-biased overlap of at least 0.60 against the hidden reference over the top 20 interaction pairs.",
+                "grading_notes": "Numeric-first comparator leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/interaction_reporting/ligrec_significant_count_band",
+                "name": "Significant interaction count within band",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The number of significant interaction pairs lies within 25% of the hidden reference after the benchmark-standard significance cutoff.",
+                "grading_notes": "Compare after the benchmark-standard significance cutoff.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/interaction_reporting/marker_localization_consistency",
+                "name": "Marker localization consistency recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "A benchmarked marker-gene spatial visualization is consistent with the hidden-reference localization summary.",
+                "grading_notes": "This uses region-wise Pearson correlation of at least 0.60 after benchmark-standard spatial binning, not free-form plot grading.",
+                "category": "result_match"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

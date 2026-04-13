@@ -1,0 +1,33 @@
+{
+  "schema_version": "0.1.0",
+  "purpose": "Conflict-of-interest firewall calibration set using the external Squidpy paper.",
+  "paper_id": "squidpy_spatial",
+  "preferred_judges": {
+    "development": "gpt-4o-mini",
+    "production": "o3-mini"
+  },
+  "selection_criteria": [
+    "Use only external-anchor leaves from squidpy_spatial.",
+    "Cover all three rubric categories.",
+    "Prefer leaves with concrete numeric evidence and mandatory evidence-quote extraction.",
+    "Hold these examples out from authored-paper prompt tuning."
+  ],
+  "leaf_ids": [
+    "squidpy_spatial/code_development/datasets_and_containers/load_visium_dataset",
+    "squidpy_spatial/code_development/spatial_graph_neighbors/construct_geometry_aware_graph",
+    "squidpy_spatial/code_development/spatial_statistics/run_moran_or_geary",
+    "squidpy_spatial/code_development/image_features_segmentation/compute_image_features",
+    "squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes",
+    "squidpy_spatial/execution/spatial_graph_neighbors/nhood_enrichment_written",
+    "squidpy_spatial/execution/spatial_statistics/moran_geary_written",
+    "squidpy_spatial/execution/image_features_segmentation/image_feature_job_executes",
+    "squidpy_spatial/result_match/datasets_and_containers/visium_shape_within_tolerance",
+    "squidpy_spatial/result_match/spatial_graph_neighbors/nhood_enrichment_rank_overlap",
+    "squidpy_spatial/result_match/spatial_graph_neighbors/cooccurrence_curve_overlap_threshold",
+    "squidpy_spatial/result_match/spatial_statistics/top_moran_genes_overlap_threshold",
+    "squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold",
+    "squidpy_spatial/result_match/spatial_statistics/ripley_curve_overlap_threshold",
+    "squidpy_spatial/result_match/image_features_segmentation/image_feature_cluster_alignment_ari",
+    "squidpy_spatial/result_match/interaction_reporting/ligrec_top_pair_overlap_threshold"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "contrast_id": "cd14_monocyte_recovery_rplus45_vs_lminus44",
+  "paper_id": "inspiration4_multiome",
+  "type": "held_out_differential_expression_contrast",
+  "description": "Held-out anti-memorization contrast for benchmark calibration: compare CD14 monocytes at R+45 versus L-44 using the same preprocessing, annotation, and DE thresholds as the main rubric.",
+  "rationale": "The original paper emphasizes immediate post-flight signatures and recovery dynamics but does not foreground this exact contrast. It is close enough to the published design to be biologically plausible while remaining unsuitable for direct memorization from the paper text.",
+  "analysis_spec": {
+    "cell_subset": "CD14 monocytes",
+    "group_a": "R+45",
+    "group_b": "L-44",
+    "required_method_family": "paired pseudobulk differential expression with astronaut-level blocking and multiple-testing correction",
+    "aggregation_level": "astronaut_timepoint_pseudobulk",
+    "pairing_unit": "astronaut_id",
+    "primary_test": "paired contrast with astronaut as blocking factor",
+    "thresholds": {
+      "adjusted_p_value_max": 0.05,
+      "absolute_log2_fold_change_min": 0.25
+    },
+    "required_outputs": [
+    "paired pseudobulk differential expression table",
+    "top up-regulated genes",
+    "top down-regulated genes",
+    "preranked pathway enrichment summary"
+    ]
+  },
+  "hidden_reference_generation": {
+    "status": "pending_benchmark_author_fill_in",
+    "note": "Populate numeric reference statistics after independent computation outside the agent-visible benchmark prompt."
+  },
+  "grading_targets": {
+    "gene_overlap_metric": "overlap_at_k",
+    "gene_overlap_k": 20,
+    "pathway_rank_metric": "rank_biased_overlap",
+    "minimum_gene_overlap_at_k": 0.35,
+    "minimum_pathway_rbo": 0.6
+  }
+}

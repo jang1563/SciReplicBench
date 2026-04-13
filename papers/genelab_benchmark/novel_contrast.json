@@ -1,0 +1,28 @@
+{
+  "contrast_id": "adrenal_to_liver_pathway_transfer",
+  "paper_id": "genelab_benchmark",
+  "type": "held_out_cross_tissue_transfer_task",
+  "description": "Held-out anti-memorization control for the authored benchmark paper: train an elastic-net logistic regression model on adrenal Hallmark pathway scores and evaluate transfer to liver samples.",
+  "rationale": "The public benchmark emphasizes families of transfer tasks, but this exact pathway-level cross-tissue pairing is suitable as a hidden-reference query that is unlikely to be memorized from high-level benchmark summaries.",
+  "analysis_spec": {
+    "train_tissue": "adrenal",
+    "test_tissue": "liver",
+    "feature_space": "Hallmark pathway scores",
+    "model_family": "elastic-net logistic regression",
+    "required_metrics": [
+      "AUROC",
+      "bootstrap_95pct_CI",
+      "permutation_p_value"
+    ]
+  },
+  "hidden_reference_generation": {
+    "status": "pending_benchmark_author_fill_in",
+    "note": "Populate reference AUROC, confidence interval, and top pathway coefficients after an independent benchmark-author run."
+  },
+  "grading_targets": {
+    "auroc_tolerance": 0.03,
+    "ci_lower_tolerance": 0.05,
+    "coefficient_rank_metric": "rank_biased_overlap",
+    "minimum_coefficient_rbo": 0.6
+  }
+}

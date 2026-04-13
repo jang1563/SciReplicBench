@@ -1,0 +1,46 @@
+[
+  {
+    "id": "genelab_benchmark_main",
+    "paper_id": "genelab_benchmark",
+    "paper_title": "GeneLab benchmark workflow",
+    "task_brief": "Reproduce the public GeneLab benchmark evaluation workflow using staged feature matrices, mission-safe split logic, classical baselines, and structured benchmark outputs.",
+    "analysis_focus": [
+      "load benchmark-ready feature matrices and split definitions without train-test leakage",
+      "run leave-one-mission-out and transfer-style evaluation logic for multiple classical baselines",
+      "emit AUROC, confidence intervals, permutation outputs, and interpretability artifacts in structured files",
+      "stage a rerunnable submission while documenting any optional Geneformer or HPC-only extensions"
+    ],
+    "required_outputs": [
+      "/workspace/submission/run.sh",
+      "/workspace/submission/README.md",
+      "/workspace/output/agent/lomo/summary.tsv",
+      "/workspace/output/agent/transfer/cross_tissue.tsv",
+      "/workspace/output/agent/negative_controls/summary.tsv",
+      "/workspace/output/agent/interpretability/top_features.tsv",
+      "/workspace/output/submission_manifest.json"
+    ],
+    "success_checks": [
+      "the workflow preserves mission-aware evaluation boundaries",
+      "multiple baseline models are compared under identical split definitions",
+      "negative controls and confidence intervals are reported rather than skipped",
+      "optional Geneformer steps are staged honestly when GPU or cached embeddings are unavailable"
+    ],
+    "public_data_sources": [
+      "https://github.com/jang1563/GeneLab_benchmark",
+      "https://huggingface.co/datasets/jang1563/genelab-benchmark",
+      "benchmark-prepared feature matrices and metadata tables staged under the paper bundle"
+    ],
+    "reviewer_path": "Use benchmark-staged feature matrices and metadata in the default path. If those inputs are missing, use data/prepare_data.sh to fetch the public repository and dataset bundle, then document any remaining heavy Geneformer steps separately.",
+    "novel_contrast_id": "adrenal_to_liver_pathway_transfer",
+    "primary_output_root": "/workspace/output/agent",
+    "agent_limits": {
+      "message_limit": 60,
+      "time_limit_minutes": 90,
+      "working_limit_minutes": 90
+    },
+    "resource_hints": {
+      "cpu_limit": "2.0",
+      "memory_limit": "8g"
+    }
+  }
+]

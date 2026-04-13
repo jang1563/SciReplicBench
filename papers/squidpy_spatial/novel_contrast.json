@@ -1,0 +1,28 @@
+{
+  "contrast_id": "visium_hne_hidden_geary_rank",
+  "paper_id": "squidpy_spatial",
+  "type": "held_out_spatial_autocorrelation_query",
+  "description": "Held-out anti-memorization control for the external anchor: compute Geary's C rankings on the Visium H&E dataset after the benchmark-standard preprocessing and compare the top spatially variable genes to a hidden reference.",
+  "rationale": "The public tutorials foreground Moran's I and example genes, but a Geary-based ranked query is much less likely to be memorized while still remaining native to the Squidpy analysis stack.",
+  "analysis_spec": {
+    "dataset": "sq.datasets.visium_hne_adata()",
+    "statistic": "geary",
+    "multiple_testing_correction": "Benjamini-Hochberg FDR",
+    "required_outputs": [
+      "full ranked Geary table",
+      "top 20 genes by Geary statistic",
+      "one spatial plot for a top-ranked held-out gene"
+    ]
+  },
+  "hidden_reference_generation": {
+    "status": "pending_benchmark_author_fill_in",
+    "note": "Populate the hidden-reference top-gene list and reference statistic values after an independent benchmark-author run."
+  },
+  "grading_targets": {
+    "rank_metric": "rank_biased_overlap",
+    "top_k_overlap_metric": "overlap_at_k",
+    "top_k": 20,
+    "minimum_rbo": 0.65,
+    "minimum_overlap_at_k": 0.4
+  }
+}

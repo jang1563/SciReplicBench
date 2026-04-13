@@ -1,0 +1,672 @@
+{
+  "paper_id": "genelab_benchmark",
+  "title": "GeneLab Benchmark: A Multi-Tissue Spaceflight Transcriptomics Benchmark for AI/ML Models",
+  "doi": "",
+  "source_url": "https://github.com/jang1563/GeneLab_benchmark",
+  "total_leaf_nodes": 55,
+  "result_match_policy": {
+    "dataset_snapshot_policy": "compare only against the benchmark-pinned feature-matrix and metadata snapshot for the configured reviewer or full run",
+    "metrics": {
+      "lomo_auroc_mae_max": 0.05,
+      "bootstrap_ci_abs_diff_max": 0.05,
+      "permutation_pvalue_abs_diff_max": 0.02,
+      "baseline_ranking_kendall_tau_min": 0.67,
+      "tissue_signal_spearman_min": 0.8,
+      "transfer_matrix_mae_max": 0.07,
+      "transfer_summary_overlap_at_4_min": 0.75,
+      "geneformer_auroc_abs_diff_max": 0.05,
+      "foundation_ranking_kendall_tau_min": 0.5,
+      "near_chance_auroc_min": 0.45,
+      "near_chance_auroc_max": 0.55,
+      "pathway_rank_rbo_min": 0.6,
+      "feature_importance_overlap_at_20_min": 0.35
+    }
+  },
+  "rubric": {
+    "id": "genelab_benchmark/rubric",
+    "name": "Full Reproduction",
+    "weight": 1.0,
+    "is_leaf": false,
+    "children": [
+      {
+        "id": "genelab_benchmark/code_development",
+        "name": "Code Development",
+        "weight": 0.35,
+        "is_leaf": false,
+        "children": [
+          {
+            "id": "genelab_benchmark/code_development/data_and_splits",
+            "name": "Data And Splits",
+            "weight": 0.18,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "genelab_benchmark/code_development/data_and_splits/load_feature_matrices",
+                "name": "Load benchmark feature matrices",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Load the benchmark feature matrices and associated metadata from HuggingFace, cached artifacts, or benchmark-packaged files.",
+                "grading_notes": "The reviewer path may use processed matrices rather than raw downloads.",
+                "category": "code_development"
+              },
+              {
+                "id": "genelab_benchmark/code_development/data_and_splits/attach_mission_tissue_labels",
+                "name": "Attach mission and tissue labels",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Represent mission IDs, tissue labels, and binary Flight/Ground targets in the working dataset.",
+                "grading_notes": "The labels must be preserved for fold construction.",
+                "category": "code_development"
+              },
+              {
+                "id": "genelab_benchmark/code_development/data_and_splits/implement_fold_safe_preprocessing",
+                "name": "Implement fold-safe preprocessing",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Implement preprocessing in a train-fold-safe manner, including any filtering, scaling, or feature selection.",
+                "grading_notes": "Any preprocessing that leaks held-out mission information should fail later result-match leaves.",
+                "category": "code_development"
+              },
+              {
+                "id": "genelab_benchmark/code_development/data_and_splits/define_lomo_splits",
+                "name": "Define LOMO splits",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Define leave-one-mission-out splits explicitly for the benchmark tasks.",
+                "grading_notes": "The split manifest should make the held-out mission explicit.",
+                "category": "code_development"
+              }
+            ]
+          },
+          {
+            "id": "genelab_benchmark/code_development/classical_ml_baselines",
+            "name": "Classical ML Baselines",
+            "weight": 0.27,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "genelab_benchmark/code_development/classical_ml_baselines/fit_elasticnet_logreg",
+                "name": "Fit elastic-net logistic regression",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Implement an elastic-net logistic-regression baseline.",
+                "grading_notes": "A SAGA-style implementation is preferred.",
+                "category": "code_development"
+              },
+              {
+                "id": "genelab_benchmark/code_development/classical_ml_baselines/fit_random_forest",
+                "name": "Fit random forest",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Implement a random-forest baseline.",
+                "grading_notes": "The model should produce probability outputs for AUROC.",
+                "category": "code_development"
+              },
+              {
+                "id": "genelab_benchmark/code_development/classical_ml_baselines/fit_xgboost",
+                "name": "Fit XGBoost",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Implement an XGBoost baseline or a documented equivalent boosted-tree model.",
+                "grading_notes": "Probability outputs are required.",
+                "category": "code_development"
+              },
+              {
+                "id": "genelab_benchmark/code_development/classical_ml_baselines/fit_pca_logreg",
+                "name": "Fit PCA plus logistic regression",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Implement a PCA plus logistic-regression baseline.",
+                "grading_notes": "PCA must be fit on the training fold only.",
+                "category": "code_development"
+              },
+              {
+                "id": "genelab_benchmark/code_development/classical_ml_baselines/compute_bootstrap_and_permutation_metrics",
+                "name": "Compute bootstrap and permutation metrics",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Compute AUROC together with bootstrap confidence intervals and permutation-based significance.",
+                "grading_notes": "The metric layer is part of the benchmark, not an optional add-on.",
+                "category": "code_development"
+              }
+            ]
+          },
+          {
+            "id": "genelab_benchmark/code_development/transfer_and_reporting",
+            "name": "Transfer Tasks And Reporting",
+            "weight": 0.22,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "genelab_benchmark/code_development/transfer_and_reporting/implement_cross_mission_transfer",
+                "name": "Implement cross-mission transfer",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Implement ordered train-on-mission i, test-on-mission j transfer tasks.",
+                "grading_notes": "The matrix semantics must be explicit.",
+                "category": "code_development"
+              },
+              {
+                "id": "genelab_benchmark/code_development/transfer_and_reporting/implement_cross_tissue_transfer",
+                "name": "Implement cross-tissue transfer",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Implement at least one benchmark-consistent cross-tissue transfer workflow.",
+                "grading_notes": "Gene-level or pathway-level transfer is acceptable if documented.",
+                "category": "code_development"
+              },
+              {
+                "id": "genelab_benchmark/code_development/transfer_and_reporting/summarize_transfer_matrices",
+                "name": "Summarize transfer matrices",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write transfer results as structured matrices or tidy tables.",
+                "grading_notes": "The scorer should be able to align rows and columns to missions or tissues.",
+                "category": "code_development"
+              },
+              {
+                "id": "genelab_benchmark/code_development/transfer_and_reporting/apply_go_nogo_rules",
+                "name": "Apply Go/No-Go rules",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Apply the benchmark's Go/No-Go criteria to the LOMO or transfer outputs.",
+                "grading_notes": "The threshold logic must be explicit.",
+                "category": "code_development"
+              }
+            ]
+          },
+          {
+            "id": "genelab_benchmark/code_development/foundation_model",
+            "name": "Foundation Model Branch",
+            "weight": 0.13,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "genelab_benchmark/code_development/foundation_model/stage_geneformer_inputs",
+                "name": "Stage Geneformer inputs",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Prepare the inputs needed for a Geneformer evaluation or a documented lightweight staging run.",
+                "grading_notes": "Serious Geneformer runs are expected on a GPU-equipped HPC; staged lightweight runs are acceptable if documented.",
+                "category": "code_development"
+              },
+              {
+                "id": "genelab_benchmark/code_development/foundation_model/run_or_stage_geneformer",
+                "name": "Run or stage Geneformer evaluation",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Run Geneformer or stage it explicitly with documented constraints and expected outputs.",
+                "grading_notes": "A transparent staged workflow can earn code-development credit.",
+                "category": "code_development"
+              },
+              {
+                "id": "genelab_benchmark/code_development/foundation_model/compare_foundation_to_classical",
+                "name": "Compare foundation model to classical baselines",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Compare the foundation-model branch to the classical baselines using the same benchmark metrics.",
+                "grading_notes": "The comparison logic is required even if the run is lightweight.",
+                "category": "code_development"
+              }
+            ]
+          },
+          {
+            "id": "genelab_benchmark/code_development/pathways_controls_interpretability",
+            "name": "Pathways, Controls, And Interpretability",
+            "weight": 0.2,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "genelab_benchmark/code_development/pathways_controls_interpretability/run_pathway_scoring",
+                "name": "Run pathway scoring or enrichment",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Run a pathway-level analysis such as preranked GSEA or sample-level pathway scoring.",
+                "grading_notes": "Open-source implementations are acceptable.",
+                "category": "code_development"
+              },
+              {
+                "id": "genelab_benchmark/code_development/pathways_controls_interpretability/implement_negative_controls",
+                "name": "Implement negative controls",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Implement negative controls such as label permutations or housekeeping-gene baselines.",
+                "grading_notes": "These controls are essential benchmark logic, not optional polish.",
+                "category": "code_development"
+              },
+              {
+                "id": "genelab_benchmark/code_development/pathways_controls_interpretability/compute_feature_importance",
+                "name": "Compute feature importance",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Compute feature-importance summaries such as SHAP values for at least one classical model.",
+                "grading_notes": "The output should be aligned to tissue or task context.",
+                "category": "code_development"
+              },
+              {
+                "id": "genelab_benchmark/code_development/pathways_controls_interpretability/export_analysis_artifacts",
+                "name": "Export analysis artifacts",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write pathway, control, and interpretability artifacts to disk.",
+                "grading_notes": "Credit requires durable files, not notebook-only display.",
+                "category": "code_development"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "genelab_benchmark/execution",
+        "name": "Execution",
+        "weight": 0.25,
+        "is_leaf": false,
+        "children": [
+          {
+            "id": "genelab_benchmark/execution/data_and_splits",
+            "name": "Data And Splits",
+            "weight": 0.2,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "genelab_benchmark/execution/data_and_splits/data_load_executes",
+                "name": "Data loading executes",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Load the benchmark matrices and metadata without fatal error.",
+                "grading_notes": "Warnings are acceptable if the objects are usable.",
+                "category": "execution"
+              },
+              {
+                "id": "genelab_benchmark/execution/data_and_splits/split_manifest_written",
+                "name": "Split manifest written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write the LOMO or transfer split manifest to disk.",
+                "grading_notes": "The scorer should be able to verify held-out missions.",
+                "category": "execution"
+              },
+              {
+                "id": "genelab_benchmark/execution/data_and_splits/preprocessed_matrix_written",
+                "name": "Preprocessed matrix written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write the preprocessed feature matrix or a cached derivative to disk.",
+                "grading_notes": "The output should support downstream model fitting.",
+                "category": "execution"
+              }
+            ]
+          },
+          {
+            "id": "genelab_benchmark/execution/classical_ml_baselines",
+            "name": "Classical ML Baselines",
+            "weight": 0.3,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "genelab_benchmark/execution/classical_ml_baselines/classical_models_execute",
+                "name": "Classical baseline training executes",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Execute the classical baseline training workflow without fatal error.",
+                "grading_notes": "At least two model families should actually run.",
+                "category": "execution"
+              },
+              {
+                "id": "genelab_benchmark/execution/classical_ml_baselines/auroc_table_written",
+                "name": "AUROC table written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write AUROC results to disk.",
+                "grading_notes": "The table should identify tissue, mission, or transfer context.",
+                "category": "execution"
+              },
+              {
+                "id": "genelab_benchmark/execution/classical_ml_baselines/bootstrap_ci_written",
+                "name": "Bootstrap confidence intervals written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write bootstrap confidence intervals to disk.",
+                "grading_notes": "The scorer should be able to inspect lower and upper bounds.",
+                "category": "execution"
+              },
+              {
+                "id": "genelab_benchmark/execution/classical_ml_baselines/permutation_results_written",
+                "name": "Permutation results written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write permutation-based significance results to disk.",
+                "grading_notes": "A p-value or null summary is required.",
+                "category": "execution"
+              }
+            ]
+          },
+          {
+            "id": "genelab_benchmark/execution/transfer_and_reporting",
+            "name": "Transfer Tasks And Reporting",
+            "weight": 0.22,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "genelab_benchmark/execution/transfer_and_reporting/cross_mission_matrix_written",
+                "name": "Cross-mission matrix written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write a cross-mission transfer matrix or tidy equivalent to disk.",
+                "grading_notes": "Row and column labels must be recoverable.",
+                "category": "execution"
+              },
+              {
+                "id": "genelab_benchmark/execution/transfer_and_reporting/cross_tissue_results_written",
+                "name": "Cross-tissue results written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write cross-tissue transfer results to disk.",
+                "grading_notes": "A tidy table is acceptable.",
+                "category": "execution"
+              },
+              {
+                "id": "genelab_benchmark/execution/transfer_and_reporting/go_nogo_summary_written",
+                "name": "Go/No-Go summary written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write a Go/No-Go summary to disk.",
+                "grading_notes": "The summary must reference the underlying metrics.",
+                "category": "execution"
+              }
+            ]
+          },
+          {
+            "id": "genelab_benchmark/execution/foundation_model",
+            "name": "Foundation Model Branch",
+            "weight": 0.13,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "genelab_benchmark/execution/foundation_model/geneformer_stage_executes",
+                "name": "Geneformer staging executes",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Execute the Geneformer staging or lightweight evaluation branch without fatal error.",
+                "grading_notes": "A documented staged path is acceptable.",
+                "category": "execution"
+              },
+              {
+                "id": "genelab_benchmark/execution/foundation_model/foundation_comparison_written",
+                "name": "Foundation comparison written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write the foundation-versus-classical comparison to disk.",
+                "grading_notes": "The comparison must use benchmark metrics.",
+                "category": "execution"
+              }
+            ]
+          },
+          {
+            "id": "genelab_benchmark/execution/pathways_controls_interpretability",
+            "name": "Pathways, Controls, And Interpretability",
+            "weight": 0.15,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "genelab_benchmark/execution/pathways_controls_interpretability/pathway_and_control_outputs_written",
+                "name": "Pathway and control outputs written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write pathway and negative-control outputs to disk.",
+                "grading_notes": "Both branches must leave inspectable artifacts.",
+                "category": "execution"
+              },
+              {
+                "id": "genelab_benchmark/execution/pathways_controls_interpretability/feature_importance_written",
+                "name": "Feature-importance outputs written",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Write feature-importance outputs to disk.",
+                "grading_notes": "The scorer should be able to inspect top features or SHAP values.",
+                "category": "execution"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "genelab_benchmark/result_match",
+        "name": "Result Match",
+        "weight": 0.4,
+        "is_leaf": false,
+        "children": [
+          {
+            "id": "genelab_benchmark/result_match/data_and_splits",
+            "name": "Data And Splits",
+            "weight": 0.18,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "genelab_benchmark/result_match/data_and_splits/six_tissues_present",
+                "name": "Six tissues present",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The benchmark dataset contains all six benchmark tissues.",
+                "grading_notes": "Strict leaf. Missing tissues fail the leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "genelab_benchmark/result_match/data_and_splits/mission_count_within_band",
+                "name": "Mission count within reference band",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The number of represented missions matches the benchmark-pinned reference exactly.",
+                "grading_notes": "Strict leaf anchored to the benchmark metadata.",
+                "category": "result_match"
+              },
+              {
+                "id": "genelab_benchmark/result_match/data_and_splits/sample_count_within_band",
+                "name": "Sample count within reference band",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The total sample count lies within 10% of the hidden reference.",
+                "grading_notes": "This allows for small reviewer-path subsets only when the benchmark is configured that way.",
+                "category": "result_match"
+              },
+              {
+                "id": "genelab_benchmark/result_match/data_and_splits/no_train_test_leakage",
+                "name": "No train-test leakage",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The split manifest shows zero overlap between training and held-out mission samples for every evaluated task.",
+                "grading_notes": "Any leakage fails the leaf regardless of downstream score.",
+                "category": "result_match"
+              }
+            ]
+          },
+          {
+            "id": "genelab_benchmark/result_match/classical_ml_baselines",
+            "name": "Classical ML Baselines",
+            "weight": 0.3,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "genelab_benchmark/result_match/classical_ml_baselines/lomo_auroc_table_close",
+                "name": "LOMO AUROC table close to reference",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The LOMO AUROC table reaches mean absolute error no greater than 0.05 against the hidden reference.",
+                "grading_notes": "Compare tissue-aligned AUROC values on the benchmark-pinned reviewer or full snapshot.",
+                "category": "result_match"
+              },
+              {
+                "id": "genelab_benchmark/result_match/classical_ml_baselines/bootstrap_ci_close",
+                "name": "Bootstrap confidence intervals close to reference",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The bootstrap confidence intervals differ by no more than 0.05 in absolute value from the hidden reference for both lower and upper bounds.",
+                "grading_notes": "Compare lower and upper bounds on the same evaluated tissues or transfer tasks.",
+                "category": "result_match"
+              },
+              {
+                "id": "genelab_benchmark/result_match/classical_ml_baselines/permutation_pvalues_close",
+                "name": "Permutation p-values close to reference",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The permutation p-values or null summaries differ by no more than 0.02 in absolute value from the hidden reference.",
+                "grading_notes": "Numeric-first comparator leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "genelab_benchmark/result_match/classical_ml_baselines/best_baseline_ranking_overlap",
+                "name": "Best-baseline ranking overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The ranking of classical baselines reaches Kendall tau of at least 0.67 against the hidden-reference ordering.",
+                "grading_notes": "The benchmark compares model ordering, not only raw scores.",
+                "category": "result_match"
+              },
+              {
+                "id": "genelab_benchmark/result_match/classical_ml_baselines/go_nogo_decisions_overlap",
+                "name": "Go/No-Go decisions overlap with reference",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The benchmark Go/No-Go decisions exactly match the hidden reference across all evaluated tissues or tasks.",
+                "grading_notes": "This captures whether the agent handled the confidence-interval logic correctly.",
+                "category": "result_match"
+              },
+              {
+                "id": "genelab_benchmark/result_match/classical_ml_baselines/tissue_level_signal_recovered",
+                "name": "Tissue-level performance signal recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The relative performance pattern across tissues reaches Spearman rho of at least 0.80 against the hidden reference.",
+                "grading_notes": "Numeric-first comparator leaf.",
+                "category": "result_match"
+              }
+            ]
+          },
+          {
+            "id": "genelab_benchmark/result_match/transfer_and_reporting",
+            "name": "Transfer Tasks And Reporting",
+            "weight": 0.22,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "genelab_benchmark/result_match/transfer_and_reporting/cross_mission_matrix_similarity",
+                "name": "Cross-mission matrix similarity above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The cross-mission transfer matrix reaches mean absolute error no greater than 0.07 against the hidden reference.",
+                "grading_notes": "Numeric-first comparator leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "genelab_benchmark/result_match/transfer_and_reporting/cross_tissue_result_similarity",
+                "name": "Cross-tissue results similarity above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The cross-tissue transfer results reach mean absolute error no greater than 0.07 against the hidden reference.",
+                "grading_notes": "Numeric-first comparator leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "genelab_benchmark/result_match/transfer_and_reporting/pathway_vs_gene_direction_recovered",
+                "name": "Pathway-versus-gene direction recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The submission recovers the benchmark direction of a gene-level versus pathway-level comparison.",
+                "grading_notes": "Compare the sign of the mean pathway-level AUROC advantage over the paired gene-level baseline on the benchmark-pinned hidden task.",
+                "category": "result_match"
+              },
+              {
+                "id": "genelab_benchmark/result_match/transfer_and_reporting/transfer_summary_overlap",
+                "name": "Transfer summary overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The ranked transfer-summary conclusions reach overlap@4 of at least 0.75 against the hidden-reference top findings.",
+                "grading_notes": "This leaf captures whether the agent preserved the narrative of which transfers work best.",
+                "category": "result_match"
+              }
+            ]
+          },
+          {
+            "id": "genelab_benchmark/result_match/foundation_model",
+            "name": "Foundation Model Branch",
+            "weight": 0.12,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "genelab_benchmark/result_match/foundation_model/geneformer_score_within_band",
+                "name": "Geneformer score within reference band",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The Geneformer benchmark score lies within 0.05 AUROC of the hidden reference for the configured reviewer or full task.",
+                "grading_notes": "The benchmark may use a staged or cached reference when reviewer-mode is enabled.",
+                "category": "result_match"
+              },
+              {
+                "id": "genelab_benchmark/result_match/foundation_model/foundation_vs_classical_direction",
+                "name": "Foundation-versus-classical direction recovered",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The submission recovers the hidden-reference direction of the foundation-versus-classical comparison.",
+                "grading_notes": "This leaf is about the comparison sign, not only the exact score.",
+                "category": "result_match"
+              },
+              {
+                "id": "genelab_benchmark/result_match/foundation_model/foundation_ranking_overlap",
+                "name": "Foundation-model ranking overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The ranking of the foundation-model branch relative to the classical baselines reaches Kendall tau of at least 0.50 against the hidden-reference ordering.",
+                "grading_notes": "Numeric-first comparator leaf.",
+                "category": "result_match"
+              }
+            ]
+          },
+          {
+            "id": "genelab_benchmark/result_match/pathways_controls_interpretability",
+            "name": "Pathways, Controls, And Interpretability",
+            "weight": 0.18,
+            "is_leaf": false,
+            "children": [
+              {
+                "id": "genelab_benchmark/result_match/pathways_controls_interpretability/negative_control_near_chance",
+                "name": "Negative control near chance",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The negative-control AUROC lies between 0.45 and 0.55.",
+                "grading_notes": "This is a critical sanity-check leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "genelab_benchmark/result_match/pathways_controls_interpretability/housekeeping_baseline_near_chance",
+                "name": "Housekeeping baseline near chance",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The housekeeping-gene baseline AUROC lies between 0.45 and 0.55.",
+                "grading_notes": "This guards against feature leakage and label leakage.",
+                "category": "result_match"
+              },
+              {
+                "id": "genelab_benchmark/result_match/pathways_controls_interpretability/pathway_enrichment_overlap_threshold",
+                "name": "Pathway-enrichment overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The ranked pathway outputs reach rank-biased overlap of at least 0.60 against the hidden reference.",
+                "grading_notes": "Numeric-first comparator leaf.",
+                "category": "result_match"
+              },
+              {
+                "id": "genelab_benchmark/result_match/pathways_controls_interpretability/shap_feature_overlap_threshold",
+                "name": "Feature-importance overlap above threshold",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "The top feature-importance outputs reach overlap@20 of at least 0.35 against the hidden reference.",
+                "grading_notes": "Numeric-first comparator leaf.",
+                "category": "result_match"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
