@@ -1,0 +1,21 @@
+FROM python:3.11-slim-bookworm
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+
+RUN python -m pip install --upgrade pip setuptools wheel
+
+COPY pyproject.toml README.md /opt/scireplicbench/
+COPY src /opt/scireplicbench/src
+RUN python -m pip install -e /opt/scireplicbench
+
+RUN mkdir -p /workspace/input /workspace/output /workspace/submission /workspace/logs
+
+CMD ["tail", "-f", "/dev/null"]

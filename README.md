@@ -72,6 +72,18 @@ pytest
 
 Running the benchmark itself requires Docker, an Inspect-compatible model provider configured in `configs/runtime.env`, and per-paper data staged via each paper's `papers/<paper>/data/prepare_data.sh`.
 
+For a fast end-to-end runtime check, you can point tasks at the lightweight smoke sandbox instead of the paper-specific scientific image:
+
+```bash
+SCIREPLICBENCH_ENV_VARIANT=smoke python -m inspect_ai eval \
+  src/scireplicbench/tasks.py@scireplicbench \
+  --model openai/gpt-4o-mini \
+  -T paper_id=squidpy_spatial \
+  --message-limit 5 \
+  --time-limit 600 \
+  --working-limit 600
+```
+
 ---
 
 ## Phased evaluation

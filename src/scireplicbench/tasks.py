@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -72,6 +73,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PAPERS_DIR = PROJECT_ROOT / "papers"
 COMPOSE_FILE = PROJECT_ROOT / "environments" / "compose.yaml"
 COMPOSE_TEMPLATE = "compose.{paper_id}.yaml"
+COMPOSE_VARIANT_TEMPLATE = "compose.{paper_id}.{variant}.yaml"
+GENERIC_VARIANT_TEMPLATE = "compose.{variant}.yaml"
+COMPOSE_OVERRIDE_ENV = "SCIREPLICBENCH_COMPOSE_FILE"
+ENV_VARIANT_ENV = "SCIREPLICBENCH_ENV_VARIANT"
 
 DEFAULT_MESSAGE_LIMIT = 60
 DEFAULT_TIME_LIMIT_SECONDS = 90 * 60
@@ -101,9 +106,37 @@ def load_task_records(paper_id: str) -> list[dict[str, Any]]:
 def compose_file_for_paper(paper_id: str) -> Path:
     """Return the docker compose file for a paper-specific sandbox image."""
 
-    compose_file = PROJECT_ROOT / "environments" / COMPOSE_TEMPLATE.format(paper_id=paper_id)
-    if compose_file.exists():
-        return compose_file
+    compose_override = os.getenv(COMPOSE_OVERRIDE_ENV, "").strip()
+    if compose_override:
+        override_path = Path(compose_override).expanduser()
+        if not override_path.is_absolute():
+            override_path = (PROJECT_ROOT / override_path).resolve()
+        return override_path
+
+    variant = os.getenv(ENV_VARIANT_ENV, "").strip()
+    candidate_paths: list[Path] = []
+    if variant:
+        candidate_paths.extend(
+            [
+                PROJECT_ROOT
+                / "environments"
+                / COMPOSE_VARIANT_TEMPLATE.format(paper_id=paper_id, variant=variant),
+                PROJECT_ROOT
+                / "environments"
+                / GENERIC_VARIANT_TEMPLATE.format(variant=variant),
+            ]
+        )
+
+    candidate_paths.extend(
+        [
+            PROJECT_ROOT / "environments" / COMPOSE_TEMPLATE.format(paper_id=paper_id),
+            COMPOSE_FILE,
+        ]
+    )
+
+    for compose_file in candidate_paths:
+        if compose_file.exists():
+            return compose_file
     return COMPOSE_FILE
 
 
@@ -332,6 +365,8 @@ def genelab_benchmark(
 
 __all__ = [
     "COMPOSE_FILE",
+    "COMPOSE_OVERRIDE_ENV",
+    "ENV_VARIANT_ENV",
     "compose_file_for_paper",
     "PROJECT_ROOT",
     "available_paper_ids",
