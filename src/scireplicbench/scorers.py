@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -15,6 +16,74 @@ _JUDGE_MAX_SUBMISSION_CHARS = 8000
 _JUDGE_MAX_PAPER_CHARS = 3000
 _JUDGE_DEFAULT_MODEL = "openai/gpt-4o-mini"
 _JUDGE_LEAF_LIMIT_ENV = "SCIREPLICBENCH_JUDGE_LEAF_LIMIT"
+_PRECHECK_SUBMISSION_DIR = "/workspace/submission"
+_PRECHECK_OUTPUT_DIR = "/workspace/output"
+_PRECHECK_FILE_CAP = 20
+
+
+def _is_trivial_stmt(stmt: ast.AST) -> bool:
+    """Return True for statements that carry no executable intent.
+
+    Trivial statements are `pass`, docstring / `...` expressions, and
+    `raise NotImplementedError` (with or without call arguments). These
+    are the markers of an empty scaffold that the v0.2 artifact-presence
+    precheck rejects.
+    """
+
+    if isinstance(stmt, ast.Pass):
+        return True
+    if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant):
+        # docstring, ellipsis literal, bare integer, etc.
+        return True
+    if isinstance(stmt, ast.Raise):
+        exc = stmt.exc
+        if isinstance(exc, ast.Name) and exc.id == "NotImplementedError":
+            return True
+        if (
+            isinstance(exc, ast.Call)
+            and isinstance(exc.func, ast.Name)
+            and exc.func.id == "NotImplementedError"
+        ):
+            return True
+    return False
+
+
+def _has_nontrivial_body(source: str) -> bool:
+    """Detect whether a Python source file contains non-trivial executable code.
+
+    Walks every `FunctionDef` / `AsyncFunctionDef` in the module (which
+    naturally covers class methods and nested functions) and checks each
+    body for at least one non-trivial statement. Also inspects module-level
+    statements, ignoring imports and function/class definitions themselves,
+    so top-level assignments or calls count as non-trivial.
+
+    Fails closed on `SyntaxError`: a file that does not parse cannot execute.
+    """
+
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return False
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if any(not _is_trivial_stmt(stmt) for stmt in node.body):
+                return True
+
+    module_excluded = (
+        ast.Import,
+        ast.ImportFrom,
+        ast.FunctionDef,
+        ast.AsyncFunctionDef,
+        ast.ClassDef,
+    )
+    for stmt in tree.body:
+        if isinstance(stmt, module_excluded):
+            continue
+        if not _is_trivial_stmt(stmt):
+            return True
+
+    return False
 
 
 @dataclass
@@ -210,6 +279,94 @@ except ModuleNotFoundError:  # pragma: no cover - local fallback
     _HAS_INSPECT_SCORING = False
 
 
+async def _artifact_presence_precheck(
+    submission_dir: str = _PRECHECK_SUBMISSION_DIR,
+    output_dir: str = _PRECHECK_OUTPUT_DIR,
+    file_cap: int = _PRECHECK_FILE_CAP,
+) -> dict[str, Any]:
+    """Preflight scan of the sandbox to detect empty-scaffold submissions.
+
+    Returns a dict with ``ok=True`` only when at least one Python file
+    under ``submission_dir`` contains a non-trivial function body or
+    module-level statement. Output artifact counts are recorded as
+    forensic metadata but do not satisfy the gate on their own -- an
+    agent that only downloaded data or produced READMEs has not done
+    anything a grader would call "replication."
+
+    Fails open on sandbox exceptions: the agent should not be penalised
+    for a Docker hiccup during scoring.
+    """
+
+    env = sandbox()
+    try:
+        py_res = await env.exec(
+            [
+                "bash",
+                "-lc",
+                (
+                    f"find {submission_dir} -maxdepth 4 -type f -name '*.py' "
+                    f"2>/dev/null | head -{file_cap}"
+                ),
+            ]
+        )
+        py_files = [p for p in (py_res.stdout or "").splitlines() if p.strip()]
+    except Exception as exc:  # pragma: no cover - sandbox is a live dependency
+        return {
+            "ok": True,
+            "reason": f"sandbox unreachable ({type(exc).__name__}: {exc})",
+            "fallback": "allow",
+            "nontrivial_py_files": 0,
+            "nontrivial_py_examples": [],
+            "output_artifact_count": 0,
+            "output_artifact_examples": [],
+        }
+
+    nontrivial = 0
+    examples: list[str] = []
+    for path in py_files[:file_cap]:
+        try:
+            src = await env.read_file(path)
+        except Exception:
+            continue
+        if _has_nontrivial_body(src):
+            nontrivial += 1
+            if len(examples) < 3:
+                examples.append(path)
+
+    try:
+        out_res = await env.exec(
+            [
+                "bash",
+                "-lc",
+                (
+                    f"find {output_dir} -maxdepth 4 -type f "
+                    f"! -name 'README*' ! -iname '*.md' 2>/dev/null | head -{file_cap}"
+                ),
+            ]
+        )
+        output_files = [p for p in (out_res.stdout or "").splitlines() if p.strip()]
+    except Exception:
+        output_files = []
+
+    ok = nontrivial > 0
+    reason = (
+        None
+        if ok
+        else (
+            "no Python file with a non-trivial function or module body was produced "
+            f"under {submission_dir}"
+        )
+    )
+    return {
+        "ok": ok,
+        "reason": reason,
+        "nontrivial_py_files": nontrivial,
+        "nontrivial_py_examples": examples,
+        "output_artifact_count": len(output_files),
+        "output_artifact_examples": output_files[:3],
+    }
+
+
 async def _collect_submission_context(max_chars: int = _JUDGE_MAX_SUBMISSION_CHARS) -> str:
     """Read a compact summary of the agent's submission artifacts from the sandbox."""
 
@@ -330,30 +487,50 @@ if _HAS_INSPECT_SCORING:
             env_cap = os.getenv(_JUDGE_LEAF_LIMIT_ENV)
             cap = leaf_limit if leaf_limit is not None else (int(env_cap) if env_cap else None)
 
-            judge = get_model(judge_model)
-            judgements: list[LeafJudgement] = []
-
-            for index, leaf in enumerate(leaves):
-                if cap is not None and index >= cap:
+            precheck = await _artifact_presence_precheck()
+            if not precheck["ok"]:
+                # Scaffold-over-substance guard: no non-trivial Python file was produced
+                # under /workspace/submission, so no leaf can claim executable backing.
+                # Zero the rubric without billing a single judge call.
+                judgements: list[LeafJudgement] = [
+                    LeafJudgement(
+                        leaf_id=str(leaf["id"]),
+                        expectations="",
+                        reality="",
+                        evidence_quote=f"precheck_failed: {precheck['reason']}",
+                        score=0,
+                        metadata={
+                            "precheck_failed": True,
+                            "nontrivial_py_files": precheck["nontrivial_py_files"],
+                            "output_artifact_count": precheck["output_artifact_count"],
+                        },
+                    )
+                    for leaf in leaves
+                ]
+            else:
+                judge = get_model(judge_model)
+                judgements = []
+                for index, leaf in enumerate(leaves):
+                    if cap is not None and index >= cap:
+                        judgements.append(
+                            LeafJudgement(
+                                leaf_id=str(leaf["id"]),
+                                expectations="",
+                                reality="",
+                                evidence_quote=f"skipped by leaf_limit={cap}",
+                                score=0,
+                                metadata={"skipped": True},
+                            )
+                        )
+                        continue
                     judgements.append(
-                        LeafJudgement(
-                            leaf_id=str(leaf["id"]),
-                            expectations="",
-                            reality="",
-                            evidence_quote=f"skipped by leaf_limit={cap}",
-                            score=0,
-                            metadata={"skipped": True},
+                        await _judge_leaf(
+                            judge,
+                            leaf,
+                            paper_summary=paper_summary,
+                            reality_context=reality,
                         )
                     )
-                    continue
-                judgements.append(
-                    await _judge_leaf(
-                        judge,
-                        leaf,
-                        paper_summary=paper_summary,
-                        reality_context=reality,
-                    )
-                )
 
             leaf_map = leaf_score_map_from_judgements(judgements)
             report = score_rubric_payload(rubric, leaf_map)
@@ -365,9 +542,17 @@ if _HAS_INSPECT_SCORING:
                     "paper_id": paper_id,
                     "judge_model": judge_model,
                     "leaf_limit": cap,
-                    "leaves_graded": sum(1 for j in judgements if not j.metadata.get("skipped")),
+                    "leaves_graded": sum(
+                        1
+                        for j in judgements
+                        if not j.metadata.get("skipped")
+                        and not j.metadata.get("precheck_failed")
+                    ),
                     "leaves_total": len(leaves),
-                    "judge_failures": sum(1 for j in judgements if j.metadata.get("judge_failure")),
+                    "judge_failures": sum(
+                        1 for j in judgements if j.metadata.get("judge_failure")
+                    ),
+                    "precheck": precheck,
                     "leaf_judgements": [j.to_dict() for j in judgements],
                 }
             )
@@ -391,6 +576,8 @@ __all__ = [
     "InspectScore",
     "NodeScoreReport",
     "RubricScoreReport",
+    "_artifact_presence_precheck",
+    "_has_nontrivial_body",
     "leaf_score_map_from_judgements",
     "load_paper_summary",
     "load_rubric_payload",
