@@ -1,0 +1,88 @@
+{
+  "about": "Sanitized summary of an Inspect .eval log produced by SciReplicBench v0.1. Demonstrates end-to-end rubric-tree scoring on the smoke sandbox.",
+  "eval": {
+    "eval_id": "ADGQyTUu79vDLCeEUJKfjL",
+    "task": "scireplicbench",
+    "task_file": "src/scireplicbench/tasks.py",
+    "task_args": {
+      "paper_id": "squidpy_spatial",
+      "attempts": 1,
+      "message_limit": null,
+      "time_limit_seconds": null,
+      "working_limit_seconds": null
+    },
+    "model": "openai/gpt-4o-mini",
+    "created": "2026-04-14T01:26:14+00:00"
+  },
+  "status": "success",
+  "stats": {
+    "started_at": "2026-04-14T01:26:14+00:00",
+    "completed_at": "2026-04-14T01:29:49+00:00",
+    "model_usage": {
+      "openai/gpt-4o-mini": {
+        "input_tokens": 72846,
+        "output_tokens": 7492,
+        "total_tokens": 130386,
+        "input_tokens_cache_read": 50048,
+        "reasoning_tokens": 0
+      }
+    }
+  },
+  "results_summary": {
+    "scorer": "rubric_tree_scorer",
+    "overall_score": 0.0,
+    "explanation": "overall=0.000, code_development=0.000, execution=0.000, result_match=0.000",
+    "category_scores": {
+      "code_development": 0.0,
+      "execution": 0.0,
+      "result_match": 0.0
+    },
+    "leaves_graded": 65,
+    "leaves_total": 65,
+    "judge_failures": 0,
+    "paper_id": "squidpy_spatial",
+    "judge_model": "openai/gpt-4o-mini"
+  },
+  "example_leaf_judgements": [
+    {
+      "leaf_id": "squidpy_spatial/code_development/datasets_and_containers/load_visium_dataset",
+      "score": 0,
+      "expectations": "Successfully load the official Visium H&E AnnData object from Squidpy while preserving its observation and variable metadata.",
+      "reality": "No submission artifacts were produced in the designated folders, indicating that the benchmark requirement was not met.",
+      "evidence_quote": "(no submission artifacts were produced in /workspace/submission or /workspace/output)"
+    },
+    {
+      "leaf_id": "squidpy_spatial/code_development/datasets_and_containers/load_seqfish_dataset",
+      "score": 0,
+      "expectations": "The implementation should successfully load the official seqFISH generic-coordinate dataset for cell-level spatial analyses, making it clear that this dataset is intended for non-grid spatial statistics.",
+      "reality": "No submission artifacts were produced in /workspace/submission or /workspace/output, indicating that the required dataset was not loaded or the task was not completed.",
+      "evidence_quote": "(no submission artifacts were produced in /workspace/submission or /workspace/output)"
+    },
+    {
+      "leaf_id": "squidpy_spatial/code_development/datasets_and_containers/attach_spatial_coordinates",
+      "score": 0,
+      "expectations": "Preserve or expose the spatial coordinates in the expected Squidpy-compatible location, such as AnnData obsm or an equivalent documented structure, while ensuring that the process produces artifacts in the output directory.",
+      "reality": "No submission artifacts were produced in /workspace/submission or /workspace/output, indicating that the spatial coordinates were neither preserved nor exposed as required.",
+      "evidence_quote": "(no submission artifacts were produced in /workspace/submission or /workspace/output)"
+    },
+    {
+      "leaf_id": "squidpy_spatial/code_development/datasets_and_containers/load_image_container",
+      "score": 0,
+      "expectations": "The submission must explicitly load the Visium H&E image through a Squidpy-compatible image container workflow.",
+      "reality": "No submission artifacts were produced in /workspace/submission or /workspace/output, indicating that the image loading was not executed.",
+      "evidence_quote": "(no submission artifacts were produced in /workspace/submission or /workspace/output)"
+    },
+    {
+      "leaf_id": "squidpy_spatial/code_development/spatial_graph_neighbors/construct_geometry_aware_graph",
+      "score": 0,
+      "expectations": "Successfully construct a spatial-neighbor graph using geometry-aware settings appropriate to the selected assay, ensuring that grid-like and generic-coordinate data are handled appropriately and not treated identically without justification.",
+      "reality": "No submission artifacts were produced, indicating that the required construction of the spatial-neighbor graph did not occur.",
+      "evidence_quote": "(no submission artifacts were produced in /workspace/submission or /workspace/output)"
+    }
+  ],
+  "notes": [
+    "Overall score of 0.000 is expected on the smoke sandbox: the Dockerfile.smoke image is a minimal Python 3.11 container with no Squidpy or scientific stack, so the agent cannot produce a real submission.",
+    "The judge correctly reports '(no submission artifacts were produced...)' as evidence for every leaf, which is the benchmark's intended honest-failure signal.",
+    "This artifact is here to let reviewers verify the end-to-end rubric scorer + LLM judge + structured evidence-quote pipeline is real without rerunning."
+  ]
+}
