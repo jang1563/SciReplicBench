@@ -2,19 +2,21 @@
 
 All costs below are measured from Inspect `.eval` log `stats.model_usage` using the public OpenAI `gpt-4o-mini` price list as of 2026-04 (input $0.15 / M, cached input $0.075 / M, output $0.60 / M). Exact per-run cost is small enough that rounding error dominates and numbers are shown to four decimals.
 
-## Summary (smoke sandbox, squidpy_spatial)
+## Summary (squidpy_spatial)
 
-| Phase | Agent | Judge | Leaves graded | Input (K) | Cache-read (K) | Output (K) | Est. cost (USD) | Wall-clock |
-|---|---|---|---:|---:|---:|---:|---:|---|
-| Dev / pipeline proof | openai/gpt-4o-mini | openai/gpt-4o-mini | 10 / 65 | 15.05 | 46.08 | 1.94 | ~$0.0094 | 75 s |
-| Dev / full-leaf | openai/gpt-4o-mini | openai/gpt-4o-mini | 65 / 65 | 72.85 | 50.05 | 7.49 | ~$0.0196 | 215 s |
+| Phase | Sandbox | Agent | Judge | Leaves graded | Input (K) | Cache-read (K) | Output (K) | Est. cost (USD) | Wall-clock |
+|---|---|---|---|---:|---:|---:|---:|---:|---|
+| Dev / pipeline proof | smoke | openai/gpt-4o-mini | openai/gpt-4o-mini | 10 / 65 | 15.05 | 46.08 | 1.94 | ~$0.0094 | 75 s |
+| Dev / full-leaf | smoke | openai/gpt-4o-mini | openai/gpt-4o-mini | 65 / 65 | 72.85 | 50.05 | 7.49 | ~$0.0196 | 215 s |
+| Dev / production | production | openai/gpt-4o-mini | openai/gpt-4o-mini | 65 / 65 | 96.33 | 118.66 | 10.48 | ~$0.0295 | 332 s |
 
-Both numbers include the agent's rollout **and** the judge's 10 or 65 per-leaf calls in the same total, because Inspect shares a single `stats.model_usage` channel across both.
+All three numbers include the agent's rollout **and** the judge's per-leaf calls in the same total, because Inspect shares a single `stats.model_usage` channel across both.
 
 ## Derived unit economics
 
-- Per-leaf judge cost (delta from the 10-leaf → 65-leaf run, agent effort held roughly constant): roughly **$0.0002 / leaf** with `gpt-4o-mini` on a context dominated by the paper summary + submission bundle (most of the extra tokens were cache-read). A full 65-leaf grading of a single sample costs roughly **$0.013 / sample** at this scale.
-- Per-sample all-in at the smoke scale: **<$0.02**. This is the right order of magnitude to iterate on rubric wording and judge prompting without worrying about budget.
+- Per-leaf judge cost (delta from the 10-leaf → 65-leaf smoke run, agent effort held roughly constant): roughly **$0.0002 / leaf** with `gpt-4o-mini`. A full 65-leaf grading of a single sample costs roughly **$0.013 / sample** at smoke scale.
+- **Production-run cost per sample: ~$0.03** (vs. ~$0.02 for full-leaf smoke). The ~50% jump maps to (a) the agent actually running commands and accumulating tool output, and (b) the judge having real submission content to read. Both effects are bounded; the scientific-image run did not balloon the cost past the smoke-extrapolation floor.
+- Per-sample all-in remains **<$0.05** for `gpt-4o-mini` on both sides of the pipeline, which is the right order of magnitude to iterate on rubric wording and judge prompting without worrying about budget.
 
 ## Extrapolation (not yet measured)
 
@@ -30,4 +32,4 @@ Actual numbers will replace these estimates as real runs land.
 - `rubric_tree_scorer` aggregates *every* leaf into a single Inspect `Score` per sample; there is no per-leaf judge call fan-out that escapes `stats.model_usage` accounting.
 - `SCIREPLICBENCH_JUDGE_LEAF_LIMIT` caps the number of leaves graded per sample. Skipped leaves are recorded with `score=0` and evidence-quote `skipped by leaf_limit=<n>`; they consume no judge tokens.
 - Cached prompt reads are billed at the lower rate and explain why the 65-leaf run's input cost scaled sub-linearly with the 10-leaf run.
-- This table does not yet account for container build time (which is a compute-minutes / electricity concern, not an API spend concern). Docker build for the smoke sandbox is ~1 min; paper-specific scientific images will be ~15–30 min each on first build and are amortized across all runs against that paper.
+- This table does not yet account for container build time (which is a compute-minutes / electricity concern, not an API spend concern). The smoke sandbox built in ~1 min; the `squidpy_spatial` scientific image (scanpy + squidpy + spatialdata via `uv`) built in ~21 min on first build and is amortized across all subsequent runs against that paper.

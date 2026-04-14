@@ -20,12 +20,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /workspace
 
 COPY ${REQUIREMENTS_FILE} /tmp/scireplicbench-requirements.txt
-RUN python -m pip install --upgrade pip setuptools wheel && \
-    python -m pip install --prefer-binary -r /tmp/scireplicbench-requirements.txt
-
-COPY pyproject.toml README.md /opt/scireplicbench/
-COPY src /opt/scireplicbench/src
-RUN python -m pip install -e /opt/scireplicbench
+# Install scientific deps with `uv`, whose resolver handles the deep
+# backtracking that scanpy + squidpy + spatialdata provoke in pip 24.3+.
+# SciReplicBench itself is not installed inside the container on purpose:
+# the agent drives the sandbox through Inspect's shell/python channels
+# and installing the project would pull inspect-ai's transitive closure
+# (textual, etc.) for no user-visible benefit.
+RUN python -m pip install --upgrade pip setuptools wheel uv && \
+    uv pip install --system --no-cache --compile-bytecode \
+        -r /tmp/scireplicbench-requirements.txt
 
 RUN mkdir -p /workspace/input /workspace/output /workspace/submission /workspace/logs
 
