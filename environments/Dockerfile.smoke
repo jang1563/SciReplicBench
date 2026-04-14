@@ -4,18 +4,19 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PIP_NO_CACHE_DIR=1 \
     PYTHONUNBUFFERED=1
 
+# Minimal sandbox for agent + reproducer smoke runs. The agent drives the
+# container through Inspect's sandbox API (shell + python), so SciReplicBench
+# itself is NOT installed here on purpose: pulling `inspect-ai`'s full
+# dependency graph inside a clean container triggers pip's resolution-too-deep
+# error and is unnecessary for what the smoke sandbox validates.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /workspace
 
 RUN python -m pip install --upgrade pip setuptools wheel
 
-COPY pyproject.toml README.md /opt/scireplicbench/
-COPY src /opt/scireplicbench/src
-RUN python -m pip install -e /opt/scireplicbench
-
+WORKDIR /workspace
 RUN mkdir -p /workspace/input /workspace/output /workspace/submission /workspace/logs
 
 CMD ["tail", "-f", "/dev/null"]

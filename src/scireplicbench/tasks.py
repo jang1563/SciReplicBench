@@ -63,11 +63,15 @@ except ModuleNotFoundError as exc:  # pragma: no cover - local fallback for impo
 
 try:
     from .tools import scratchpad
+    from .scorers import rubric_tree_scorer
 except ImportError:  # pragma: no cover - file-based Inspect loading fallback
     PACKAGE_PARENT = Path(__file__).resolve().parent.parent
     if str(PACKAGE_PARENT) not in sys.path:
         sys.path.insert(0, str(PACKAGE_PARENT))
     from scireplicbench.tools import scratchpad
+    from scireplicbench.scorers import rubric_tree_scorer
+
+_JUDGE_MODEL_ENV = "SCIREPLICBENCH_JUDGE_MODEL"
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PAPERS_DIR = PROJECT_ROOT / "papers"
@@ -262,6 +266,7 @@ def _paper_task(
     first = records[0]
     agent_limits = first.get("agent_limits", {})
 
+    judge_model = os.getenv(_JUDGE_MODEL_ENV, "").strip() or "openai/gpt-4o-mini"
     return Task(
         dataset=dataset,
         solver=react(
@@ -272,6 +277,7 @@ def _paper_task(
             tools=[bash(), python(), scratchpad()],
             attempts=attempts,
         ),
+        scorer=rubric_tree_scorer(judge_model=judge_model),
         sandbox=("docker", str(compose_file_for_paper(paper_id))),
         message_limit=message_limit or int(
             agent_limits.get("message_limit", DEFAULT_MESSAGE_LIMIT)

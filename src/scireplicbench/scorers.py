@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-from .judge import LeafJudgement
+from .judge import LeafJudgement, format_leaf_judge_prompt, parse_leaf_judgement
 from .rubric_utils import collect_leaf_ids, collect_leaf_nodes, extract_rubric_tree, validate_rubric_payload
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_JUDGE_MAX_SUBMISSION_CHARS = 8000
+_JUDGE_MAX_PAPER_CHARS = 3000
+_JUDGE_DEFAULT_MODEL = "openai/gpt-4o-mini"
+_JUDGE_LEAF_LIMIT_ENV = "SCIREPLICBENCH_JUDGE_LEAF_LIMIT"
 
 
 @dataclass
@@ -174,11 +182,219 @@ def to_inspect_score(report: RubricScoreReport) -> InspectScore:
     )
 
 
+def load_rubric_payload(paper_id: str) -> dict[str, Any]:
+    """Load the rubric JSON for a given paper from the repo `papers/` tree."""
+
+    rubric_path = PROJECT_ROOT / "papers" / paper_id / "rubric.json"
+    with rubric_path.open() as handle:
+        return json.load(handle)
+
+
+def load_paper_summary(paper_id: str, *, max_chars: int = _JUDGE_MAX_PAPER_CHARS) -> str:
+    """Load the paper-summary markdown with a conservative truncation."""
+
+    paper_path = PROJECT_ROOT / "papers" / paper_id / "paper.md"
+    if paper_path.exists():
+        return paper_path.read_text()[:max_chars]
+    return f"Paper `{paper_id}`: paper.md is not available to the judge."
+
+
+try:  # pragma: no cover - optional Inspect-only integration
+    from inspect_ai.model import get_model
+    from inspect_ai.scorer import Target, mean, scorer, stderr
+    from inspect_ai.solver import TaskState
+    from inspect_ai.util import sandbox
+
+    _HAS_INSPECT_SCORING = True
+except ModuleNotFoundError:  # pragma: no cover - local fallback
+    _HAS_INSPECT_SCORING = False
+
+
+async def _collect_submission_context(max_chars: int = _JUDGE_MAX_SUBMISSION_CHARS) -> str:
+    """Read a compact summary of the agent's submission artifacts from the sandbox."""
+
+    env = sandbox()
+    chunks: list[str] = []
+    try:
+        listing = await env.exec(
+            [
+                "bash",
+                "-lc",
+                (
+                    "{ find /workspace/submission -maxdepth 4 -type f 2>/dev/null; "
+                    "find /workspace/output -maxdepth 4 -type f 2>/dev/null; } | head -40"
+                ),
+            ]
+        )
+        file_list = (listing.stdout or "").strip()
+    except Exception as exc:  # pragma: no cover - sandbox is a live dependency
+        return f"(sandbox unreachable during scoring: {exc})"
+
+    if not file_list:
+        return "(no submission artifacts were produced in /workspace/submission or /workspace/output)"
+
+    chunks.append("Submission file list:\n" + file_list)
+    total = len(chunks[0])
+    budget = max_chars - total
+
+    for path in file_list.splitlines():
+        path = path.strip()
+        if not path or budget <= 0:
+            break
+        try:
+            contents = await env.read_file(path)
+        except Exception:
+            continue
+        header = f"\n--- {path} ---\n"
+        snippet = contents[: max(budget - len(header), 0)]
+        if not snippet:
+            break
+        chunks.append(header + snippet)
+        budget -= len(header) + len(snippet)
+
+    return "\n".join(chunks)
+
+
+def _resolve_paper_id(state: Any) -> str:
+    metadata = getattr(state, "metadata", None) or {}
+    paper_id = metadata.get("paper_id")
+    if paper_id:
+        return str(paper_id)
+    sample_id = getattr(state, "sample_id", None) or ""
+    if isinstance(sample_id, str) and sample_id.endswith("_main"):
+        return sample_id[: -len("_main")]
+    raise ValueError(
+        "Could not resolve paper_id from sample state; expected metadata.paper_id or '<paper>_main' sample id."
+    )
+
+
+async def _judge_leaf(
+    judge: Any,
+    leaf: dict[str, Any],
+    *,
+    paper_summary: str,
+    reality_context: str,
+) -> LeafJudgement:
+    prompt = format_leaf_judge_prompt(
+        leaf,
+        paper_summary=paper_summary,
+        reality_context=reality_context,
+    )
+    try:
+        result = await judge.generate(prompt)
+        raw = getattr(result, "completion", None) or str(result)
+        return parse_leaf_judgement(raw, expected_leaf_id=leaf["id"])
+    except Exception as exc:  # capture judge/model failures as leaf-level 0
+        return LeafJudgement(
+            leaf_id=str(leaf["id"]),
+            expectations="",
+            reality="",
+            evidence_quote=f"judge_error: {type(exc).__name__}: {exc}",
+            score=0,
+            metadata={"judge_failure": True},
+        )
+
+
+if _HAS_INSPECT_SCORING:
+
+    @scorer(metrics=[mean(), stderr()])
+    def rubric_tree_scorer(
+        judge_model: str = _JUDGE_DEFAULT_MODEL,
+        *,
+        leaf_limit: int | None = None,
+    ):
+        """Grade each rubric leaf with an LLM judge and aggregate to a weighted score.
+
+        Each leaf is graded independently using the structured judge prompt
+        (Expectations → Reality → Evidence Quote → Score). Leaf scores flow
+        bottom-up through the rubric tree's existing weighted aggregation.
+
+        Args:
+          judge_model: Inspect-style model identifier for the judge.
+          leaf_limit: Optional cap on leaves graded per sample. When provided,
+            the remaining leaves are scored 0 with an informational evidence
+            quote. Mainly useful for cheap smoke runs.
+        """
+
+        import os
+
+        async def score(state: "TaskState", target: "Target"):  # type: ignore[name-defined]
+            paper_id = _resolve_paper_id(state)
+            rubric = load_rubric_payload(paper_id)
+            paper_summary = load_paper_summary(paper_id)
+            reality = await _collect_submission_context()
+
+            tree = extract_rubric_tree(rubric)
+            leaves = collect_leaf_nodes(tree)
+
+            env_cap = os.getenv(_JUDGE_LEAF_LIMIT_ENV)
+            cap = leaf_limit if leaf_limit is not None else (int(env_cap) if env_cap else None)
+
+            judge = get_model(judge_model)
+            judgements: list[LeafJudgement] = []
+
+            for index, leaf in enumerate(leaves):
+                if cap is not None and index >= cap:
+                    judgements.append(
+                        LeafJudgement(
+                            leaf_id=str(leaf["id"]),
+                            expectations="",
+                            reality="",
+                            evidence_quote=f"skipped by leaf_limit={cap}",
+                            score=0,
+                            metadata={"skipped": True},
+                        )
+                    )
+                    continue
+                judgements.append(
+                    await _judge_leaf(
+                        judge,
+                        leaf,
+                        paper_summary=paper_summary,
+                        reality_context=reality,
+                    )
+                )
+
+            leaf_map = leaf_score_map_from_judgements(judgements)
+            report = score_rubric_payload(rubric, leaf_map)
+            base_score = to_inspect_score(report)
+
+            metadata = dict(base_score.metadata or {})
+            metadata.update(
+                {
+                    "paper_id": paper_id,
+                    "judge_model": judge_model,
+                    "leaf_limit": cap,
+                    "leaves_graded": sum(1 for j in judgements if not j.metadata.get("skipped")),
+                    "leaves_total": len(leaves),
+                    "judge_failures": sum(1 for j in judgements if j.metadata.get("judge_failure")),
+                    "leaf_judgements": [j.to_dict() for j in judgements],
+                }
+            )
+            return InspectScore(
+                value=base_score.value,
+                explanation=base_score.explanation,
+                metadata=metadata,
+            )
+
+        return score
+
+else:  # pragma: no cover - pure-library fallback so imports succeed outside Inspect
+
+    def rubric_tree_scorer(*args: Any, **kwargs: Any):  # type: ignore[no-redef]
+        raise RuntimeError(
+            "inspect-ai is not installed; rubric_tree_scorer requires the Inspect AI runtime."
+        )
+
+
 __all__ = [
     "InspectScore",
     "NodeScoreReport",
     "RubricScoreReport",
     "leaf_score_map_from_judgements",
+    "load_paper_summary",
+    "load_rubric_payload",
+    "rubric_tree_scorer",
     "score_rubric_payload",
     "summarize_score_report",
     "to_inspect_score",
