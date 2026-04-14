@@ -11,12 +11,20 @@ This document names the concrete failure modes observed while running SciReplicB
 - **Why it matters for the benchmark:** This is the *correct* behavior for the smoke sandbox (no scientific tools, no data), but the same code path would silently floor real runs if a paper's `prepare_data.sh` failed to stage files or if the agent misunderstood the output contract.
 - **Expected mitigation once Phase 4a data is available:** promote a `result_match` leaf per paper to "Any artifact under /workspace/submission" so the mode is visible as a hard failure rather than a graded 0.
 
-### 2. README-only false positives in the judge
+### 2. README-only false positives in the judge (flips model ordering)
 
 - **What it is:** The agent creates `/workspace/submission/README.md` describing the *intended* workflow and `touch`es empty `.py` files named after each analysis stage. The judge, shown only these artifacts plus the rubric, grades some leaves as passing based on the README's natural-language description of what the code would do.
-- **Where seen:** `logs-prod/2026-04-14T02-40-31-00-00_scireplicbench_GaKiuf8GTW7q6BLSMRNC6K.eval`. Two leaves passed: `squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features` and `squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes`. Both passing evidence quotes start with "This README provides instructions on running the Squidpy spatial omics workflow..."
-- **Why it matters:** Judge lenience on README text inflates scores for agents that planned but did not execute. A 2/65 pass rate is small, but at scale this could mask the difference between "agent wrote code that runs" and "agent wrote a convincing README."
-- **Mitigation options (not yet implemented):** (a) have the judge require the evidence quote to come from a non-README file, (b) add a precheck that a leaf's `code_development` rating requires a non-empty Python source file referencing the relevant function, (c) tighten the judge prompt's `expectations` section to distinguish "describes" from "implements".
+- **Where seen — and why it matters:** Three same-setup runs with different agents on the `squidpy_spatial` scientific sandbox, judged by the same `gpt-4o-mini`:
+  - `gpt-4o-mini` agent: **0.028** (2/65 passing). Produced a README + empty stubs.
+  - `claude-haiku-4-5` agent: **0.000** (0/65 passing). Tried to `import squidpy`, hit a zarr v3 incompatibility, spent the budget diagnosing. No README scaffold.
+  - `claude-sonnet-4-6` agent: **0.000** (0/65 passing). Spent the budget diagnosing a `pkg_resources` import issue. No README scaffold.
+
+  The weaker agent scored higher than both Claude models — not because it did better work, but because its *less-ambitious scaffold* was more legible to a lenient judge. The Claude models' attempts at real execution produced no files the judge could latch onto.
+
+- **Passing-leaf evidence trail (gpt-4o-mini run):** `squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features` and `squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes`. Both passing evidence quotes start with "This README provides instructions on running the Squidpy spatial omics workflow..."
+
+- **Why it matters for the benchmark:** The judge's scoring behaviour is currently sensitive to submission *shape* in a way that can flip the ordering between agents of different actual capability. Without mitigation, a SciReplicBench score is a noisy proxy for real replication skill.
+- **Mitigation options (not yet implemented):** (a) require the evidence quote to come from a non-README file, (b) add a precheck that a leaf's `code_development` rating requires a non-empty Python source file referencing the relevant function, (c) tighten the judge prompt's `expectations` section to distinguish "describes" from "implements", (d) add an artifact-existence precheck that discounts submissions without any executable `python` or shell invocations visible in the sandbox log.
 
 ### 3. Empty-scaffold submission shape
 
@@ -39,12 +47,21 @@ This document names the concrete failure modes observed while running SciReplicB
 - **Where seen:** `logs-smoke/2026-04-13T22-08-01-00-00_scireplicbench_MdTkRUJL7QnyWbrPaoQdvr.eval`, the pre-scorer plumbing run.
 - **Why it matters:** Benchmark operators should treat `message_limit < 10` as smoke-only. Phase 4a is already scheduled at ≥ 25 messages and Phase 4b at 60+.
 
+### 6. Sandbox environment wrinkles defeat real execution attempts
+
+- **What it is:** The scientific image resolves deps at build time via `uv`, but two modern packages in the Squidpy stack have version frictions at *import time* that only surface when the agent actually tries to use them:
+  - `zarr` v3 changes the API that `numcodecs.blosc` expects. An agent importing `squidpy → spatialdata → xarray → zarr` may hit a `cbuffer` attribute lookup that v3 no longer exposes the same way. Haiku's 40-message run is dominated by diagnosing this.
+  - `pkg_resources` was deprecated and is no longer always importable in Python 3.11 slim; some squidpy-adjacent code paths still try to import it. Sonnet spent its budget probing the Python path for a missing `pkg_resources`.
+- **Where seen:** `logs-prod/2026-04-14T02-58-39-00-00_scireplicbench_Kfjef4zbDpVAoWmQS7fYDB.eval` (zarr v3), `logs-prod/2026-04-14T03-05-54-00-00_scireplicbench_JeRrV6juZ4nxSBKtAVuK3w.eval` (pkg_resources).
+- **Why it matters:** The benchmark cannot separate "agent is bad at Squidpy" from "agent was defeated by a Docker-side environment wrinkle." Fixing the environment is a prerequisite to drawing strong capability claims from the score.
+- **Mitigation:** pin `zarr==2.18.3` and `numcodecs<0.16` in `requirements.squidpy_spatial.txt` (already done for zarr; numcodecs pin is pending), pre-install `setuptools` so `pkg_resources` is importable without a shim, and add a container-health smoke that runs `python -c "import squidpy; import scanpy; import spatialdata"` as part of the build.
+
 ## Anticipated but not yet observed
 
 Modes the design expects but that no log evidence yet supports:
 
 - **Judge parse failure.** `rubric_tree_scorer` degrades gracefully (score 0, evidence `judge_error: ...`) but we have not yet caught the judge in the act. The instrumentation (`leaves_graded`, `judge_failures`) is already recorded in metadata so a future run with a weaker judge or a malformed leaf will expose this naturally.
-- **Method-equivalence drift.** e.g., agent uses `scanpy.pp.combat` where the rubric expects `ComBat-seq` on counts. Will only show up once a real scientific image exercises the rubric.
+- **Method-equivalence drift.** e.g., agent uses `scanpy.pp.combat` where the rubric expects `ComBat-seq` on counts. Will only show up once a stronger agent produces real analyses.
 - **Self-grading-bias artifact.** If the Squidpy-anchored judge grades the authored papers leniently, we expect a systematic gap between Squidpy and authored-paper judge-human agreement; waiting on `judge_eval/human_grades.json` to populate.
 - **Evaluation leakage across benchmark splits.** For `genelab_benchmark` specifically, an agent could accidentally leak mission-level information across LOMO folds. The rubric flags this, but no production run has executed it yet.
 

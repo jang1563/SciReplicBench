@@ -4,19 +4,23 @@ All costs below are measured from Inspect `.eval` log `stats.model_usage` using 
 
 ## Summary (squidpy_spatial)
 
-| Phase | Sandbox | Agent | Judge | Leaves graded | Input (K) | Cache-read (K) | Output (K) | Est. cost (USD) | Wall-clock |
-|---|---|---|---|---:|---:|---:|---:|---:|---|
-| Dev / pipeline proof | smoke | openai/gpt-4o-mini | openai/gpt-4o-mini | 10 / 65 | 15.05 | 46.08 | 1.94 | ~$0.0094 | 75 s |
-| Dev / full-leaf | smoke | openai/gpt-4o-mini | openai/gpt-4o-mini | 65 / 65 | 72.85 | 50.05 | 7.49 | ~$0.0196 | 215 s |
-| Dev / production | production | openai/gpt-4o-mini | openai/gpt-4o-mini | 65 / 65 | 96.33 | 118.66 | 10.48 | ~$0.0295 | 332 s |
+| Phase | Sandbox | Agent | Judge | Leaves | Agent tokens (in/cache/out) | Judge tokens (in/out) | Est. cost (USD) | Wall-clock |
+|---|---|---|---|---:|---|---|---:|---|
+| Dev / pipeline proof | smoke | gpt-4o-mini | gpt-4o-mini | 10 | 15K / 46K / 1.9K (shared) | (shared) | ~$0.0094 | 75 s |
+| Dev / full-leaf | smoke | gpt-4o-mini | gpt-4o-mini | 65 | 73K / 50K / 7.5K (shared) | (shared) | ~$0.0196 | 215 s |
+| Dev / production | production | gpt-4o-mini | gpt-4o-mini | 65 | 96K / 119K / 10.5K (shared) | (shared) | ~$0.0295 | 332 s |
+| Dev / production | production | claude-haiku-4-5 | gpt-4o-mini | 65 | 6.7K / 130K / 1.7K | 56K / 6.8K | ~$0.15 | 274 s |
+| Dev / production | production | claude-sonnet-4-6 | gpt-4o-mini | 65 | 1.8K / 178K / 1.7K | 56K / 6.8K | ~$0.58 | 247 s |
 
-All three numbers include the agent's rollout **and** the judge's per-leaf calls in the same total, because Inspect shares a single `stats.model_usage` channel across both.
+When the agent and judge are the same OpenAI model, Inspect reports their combined tokens in one row and separating them requires counting leaf calls by hand. When the agent is Anthropic and the judge is OpenAI, each provider's totals are tracked independently and the judge column is populated directly.
 
 ## Derived unit economics
 
-- Per-leaf judge cost (delta from the 10-leaf → 65-leaf smoke run, agent effort held roughly constant): roughly **$0.0002 / leaf** with `gpt-4o-mini`. A full 65-leaf grading of a single sample costs roughly **$0.013 / sample** at smoke scale.
-- **Production-run cost per sample: ~$0.03** (vs. ~$0.02 for full-leaf smoke). The ~50% jump maps to (a) the agent actually running commands and accumulating tool output, and (b) the judge having real submission content to read. Both effects are bounded; the scientific-image run did not balloon the cost past the smoke-extrapolation floor.
-- Per-sample all-in remains **<$0.05** for `gpt-4o-mini` on both sides of the pipeline, which is the right order of magnitude to iterate on rubric wording and judge prompting without worrying about budget.
+- **gpt-4o-mini end-to-end:** ~$0.03 / sample. 65 judge leaves on a real production submission cost essentially the same as the agent itself, thanks to prompt caching.
+- **Claude Haiku 4.5 as agent (with gpt-4o-mini judge):** ~$0.15 / sample. About 5× more expensive than gpt-4o-mini end-to-end, driven by Haiku input pricing even though the judge side is unchanged.
+- **Claude Sonnet 4.6 as agent (with gpt-4o-mini judge):** ~$0.58 / sample. ~20× gpt-4o-mini end-to-end and ~4× Haiku. The jump is almost entirely Sonnet's output + cache-write pricing at the strong-model tier.
+- **Judge cost is stable across agents:** the judge used ~56K input + 6.8K output tokens in both Claude runs, mirroring the structure of the paper bundle + rubric + per-leaf prompting. This is the floor you pay to grade one sample with a gpt-4o-mini judge on the 65-leaf squidpy rubric: ~$0.012 regardless of which agent produced the submission.
+- Per-sample all-in remains **<$1** for any agent in the currently tested lineup, which is the right order of magnitude to iterate on rubric wording and judge prompting without worrying about budget.
 
 ## Extrapolation (not yet measured)
 
