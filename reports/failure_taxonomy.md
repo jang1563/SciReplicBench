@@ -1,6 +1,6 @@
 # Failure Taxonomy
 
-This document names the concrete failure modes observed while running SciReplicBench agents. It is intentionally written from measured runs, not hypothetical scenarios, so each mode is traceable back to a log artifact. Current coverage is narrow (smoke sandbox, `squidpy_spatial`, one agent, one seed) and will broaden as the matrix fills out.
+This document names the concrete failure modes observed while running SciReplicBench agents. It is intentionally written from measured runs, not hypothetical scenarios, so each mode is traceable back to a log artifact. Current coverage is still narrow (smoke sandbox plus one three-agent production matrix on `squidpy_spatial`) and will broaden as the matrix fills out.
 
 ## Observed modes
 
@@ -11,7 +11,7 @@ This document names the concrete failure modes observed while running SciReplicB
 - **Why it matters for the benchmark:** This is the *correct* behavior for the smoke sandbox (no scientific tools, no data), but the same code path would silently floor real runs if a paper's `prepare_data.sh` failed to stage files or if the agent misunderstood the output contract.
 - **Expected mitigation once Phase 4a data is available:** promote a `result_match` leaf per paper to "Any artifact under /workspace/submission" so the mode is visible as a hard failure rather than a graded 0.
 
-### 2. README-only false positives in the judge (flips model ordering)
+### 2. README-only false positives in the judge (flips model ordering) — FIXED in v0.2
 
 - **What it is:** The agent creates `/workspace/submission/README.md` describing the *intended* workflow and `touch`es empty `.py` files named after each analysis stage. The judge, shown only these artifacts plus the rubric, grades some leaves as passing based on the README's natural-language description of what the code would do.
 - **Where seen — and why it matters:** Three same-setup runs with different agents on the `squidpy_spatial` scientific sandbox, judged by the same `gpt-4o-mini`:
@@ -24,14 +24,22 @@ This document names the concrete failure modes observed while running SciReplicB
 - **Passing-leaf evidence trail (gpt-4o-mini run):** `squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features` and `squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes`. Both passing evidence quotes start with "This README provides instructions on running the Squidpy spatial omics workflow..."
 
 - **Why it matters for the benchmark:** The judge's scoring behaviour is currently sensitive to submission *shape* in a way that can flip the ordering between agents of different actual capability. Without mitigation, a SciReplicBench score is a noisy proxy for real replication skill.
-- **Mitigation options (not yet implemented):** (a) require the evidence quote to come from a non-README file, (b) add a precheck that a leaf's `code_development` rating requires a non-empty Python source file referencing the relevant function, (c) tighten the judge prompt's `expectations` section to distinguish "describes" from "implements", (d) add an artifact-existence precheck that discounts submissions without any executable `python` or shell invocations visible in the sandbox log.
+- **Mitigation shipped in v0.2:** option (d) — artifact-presence precheck. `src/scireplicbench/scorers.py` now invokes `_artifact_presence_precheck` before any LLM judge call. The precheck AST-scans submission `.py` files for non-trivial function or module bodies and rejects empty stubs (`pass`-only, docstring-only, `raise NotImplementedError`). When the gate fails, every leaf is auto-zeroed with a structured `precheck_failed` evidence quote and the judge is never invoked.
+- **Empirical evidence the fix works:** rerunning the same three production agents with v0.2 active gave the following before / after scores:
+  - `gpt-4o-mini`: **0.028 → 0.000** (the ordering flip is gone)
+  - `claude-haiku-4-5`: 0.000 → 0.000
+  - `claude-sonnet-4-6`: 0.000 → 0.000
+  - All three runs hit `precheck.ok=False` (no `.py` file with a non-trivial body, no non-doc output artifact). The judge was skipped entirely on each rerun. Wall-clock dropped 50–70 % per sample because the 65-leaf grading loop never ran.
+- **After-fix log IDs:** `logs-prod/2026-04-14T13-25-26-..._cEsYJL6i...eval` (gpt-4o-mini), `..._13-32-06-..._nQGFXNVZ...eval` (Haiku), `..._13-48-30-..._2EuTNiNq...eval` (Sonnet). Sanitized snapshots in `examples/`.
+- **What this does NOT fix:** options (a), (b), and (c) above remain useful future work for richer agents that DO produce non-trivial code but get over-credited on prose explanations of what the code "would" do. v0.2's task-level gate addresses the empty-scaffold pattern; per-leaf code-vs-prose gating is v0.3 scope.
 
-### 3. Empty-scaffold submission shape
+### 3. Empty-scaffold submission shape — FIXED in v0.2 (same mitigation as mode 2)
 
 - **What it is:** The agent's output is structurally plausible — it produces a directory tree and filenames matching the rubric — but the files are empty or stub-only. In the production run the agent ran `touch /workspace/submission/scripts/load_datasets.py` and several sibling files, then stopped.
 - **Where seen:** Same `GaKiuf8G` prod log. 12 bash calls over 40 messages; 0 python calls; no executable analysis ever ran inside the sandbox.
 - **Why it matters:** This is the precursor to mode 2. A benchmark that only grades file structure will reward empty scaffolding.
-- **Mitigation:** At least one `execution` leaf per paper should require the judge to find a line of STDOUT or a file-mtime that could only come from running the code. A stricter form of the "evidence_quote must cite a command or output" rule.
+- **What v0.2 solved:** `_artifact_presence_precheck` now blocks this exact stub-only pattern before any leaf grading, so empty scaffold directories no longer earn structure points or README-mediated false positives.
+- **What remains for v0.3:** Once an agent writes some real code, the scorer still needs per-leaf evidence rules that distinguish executable implementation from descriptive prose. For `code_development` and `execution` leaves, that means requiring non-README code snippets, command invocations, or runtime output rather than accepting a plausible file tree alone.
 
 ### 4. Tool-call absorption into the scratchpad
 
