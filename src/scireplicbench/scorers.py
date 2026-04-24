@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -12,13 +13,94 @@ from .judge import LeafJudgement, format_leaf_judge_prompt, parse_leaf_judgement
 from .rubric_utils import collect_leaf_ids, collect_leaf_nodes, extract_rubric_tree, validate_rubric_payload
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-_JUDGE_MAX_SUBMISSION_CHARS = 8000
+_JUDGE_MAX_SUBMISSION_CHARS = 36000
+_JUDGE_MAX_SUBMISSION_FILE_CHARS = 2600
+_JUDGE_MAX_SOURCE_FILE_CHARS = 18000
 _JUDGE_MAX_PAPER_CHARS = 3000
 _JUDGE_DEFAULT_MODEL = "openai/gpt-4o-mini"
 _JUDGE_LEAF_LIMIT_ENV = "SCIREPLICBENCH_JUDGE_LEAF_LIMIT"
+_JUDGE_PARSE_RETRIES = 2
 _PRECHECK_SUBMISSION_DIR = "/workspace/submission"
 _PRECHECK_OUTPUT_DIR = "/workspace/output"
 _PRECHECK_FILE_CAP = 20
+_REALITY_SECTION_HEADER_RE = re.compile(r"^--- (?P<path>.+?) ---$", re.MULTILINE)
+_MARKDOWN_EXTENSIONS = {".md", ".markdown", ".rst"}
+_SUBMISSION_CONTEXT_PRIORITY_PATHS = (
+    "/workspace/output/agent/lomo/summary.tsv",
+    "/workspace/output/agent/lomo/split_manifest.tsv",
+    "/workspace/output/agent/lomo/preprocessed_features.tsv",
+    "/workspace/output/agent/transfer/cross_tissue.tsv",
+    "/workspace/output/agent/negative_controls/summary.tsv",
+    "/workspace/output/agent/interpretability/top_features.tsv",
+    "/workspace/output/agent/go_nogo/summary.tsv",
+    "/workspace/output/agent/foundation/geneformer_staging.tsv",
+    "/workspace/output/submission_manifest.json",
+    "/workspace/submission/main_analysis.py",
+    "/workspace/submission/genelab_scaffold.py",
+    "/workspace/submission/run.sh",
+    "/workspace/submission/README.md",
+)
+_SOURCE_FOCUS_PATTERNS = (
+    "FEATURE_ROOT",
+    "LABEL_ROOT",
+    "OUTPUT_ROOT",
+    "LOMO_FIELDS",
+    "TRANSFER_FIELDS",
+    "NEGATIVE_FIELDS",
+    "INTERPRETABILITY_FIELDS",
+    "GO_NOGO_FIELDS",
+    "FOUNDATION_FIELDS",
+    "SPLIT_FIELDS",
+    "PREPROCESSED_FIELDS",
+    "FoldSpec",
+    "AlignedFoldData",
+    "def discover_fold_specs",
+    "def _read_feature_rows",
+    "def _read_label_rows",
+    "def _read_meta_rows",
+    "def _align_train_test_features",
+    "def _align_rows",
+    "def load_aligned_fold",
+    "train_meta",
+    "test_meta",
+    "heldout_mission",
+    "def _variance_screened_matrices",
+    "def _elasticnet_scores",
+    "LogisticRegression",
+    "penalty=\"elasticnet\"",
+    "def _random_forest_scores",
+    "RandomForestClassifier",
+    "def _xgboost_scores",
+    "XGBClassifier",
+    "GradientBoostingClassifier",
+    "def _pca_logreg_scores",
+    "PCA",
+    "def _score_model",
+    "def _bootstrap_ci",
+    "def _permutation_pvalue",
+    "def _evaluate_lomo",
+    "go_nogo",
+    "def _build_go_nogo_rows",
+    "decision",
+    "def _build_negative_control_rows",
+    "label_permutation",
+    "housekeeping_proxy_low_variance",
+    "def _build_interpretability_rows",
+    "feature_rank",
+    "def _feature_intersection",
+    "def _build_transfer_rows",
+    "source_tissue",
+    "target_tissue",
+    "def _build_split_manifest_rows",
+    "train_missions",
+    "test_missions",
+    "def _build_preprocessed_rows",
+    "def _build_foundation_rows",
+    "Geneformer",
+    "def write_tsv",
+    "def _write_manifest",
+    "def main",
+)
 
 
 def _is_trivial_stmt(stmt: ast.AST) -> bool:
@@ -131,6 +213,22 @@ class RubricScoreReport:
             "missing_leaf_ids": list(self.missing_leaf_ids),
             "extra_leaf_ids": list(self.extra_leaf_ids),
             "root": self.root.to_dict(),
+        }
+
+
+@dataclass(frozen=True)
+class EvidenceSource:
+    """Resolved source for a judge evidence quote inside scorer reality context."""
+
+    source_type: str
+    path: str | None
+    matched_text: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "source_type": self.source_type,
+            "path": self.path,
+            "matched_text": self.matched_text,
         }
 
 
@@ -367,10 +465,431 @@ async def _artifact_presence_precheck(
     }
 
 
-async def _collect_submission_context(max_chars: int = _JUDGE_MAX_SUBMISSION_CHARS) -> str:
+def _iter_reality_sources(reality_context: str) -> list[EvidenceSource]:
+    """Split scorer reality context into file-list and file-content sources."""
+
+    sources: list[EvidenceSource] = []
+    matches = list(_REALITY_SECTION_HEADER_RE.finditer(reality_context))
+    file_list_block = reality_context[: matches[0].start()] if matches else reality_context
+    prefix = "Submission file list:\n"
+    if file_list_block.startswith(prefix):
+        for line in file_list_block[len(prefix) :].splitlines():
+            path = line.strip()
+            if path:
+                sources.append(
+                    EvidenceSource(
+                        source_type="file_list",
+                        path=path,
+                        matched_text=path,
+                    )
+                )
+
+    for index, match in enumerate(matches):
+        path = match.group("path").strip()
+        start = match.end()
+        if start < len(reality_context) and reality_context[start] == "\n":
+            start += 1
+        end = matches[index + 1].start() - 1 if index + 1 < len(matches) else len(reality_context)
+        text = reality_context[start:end].rstrip()
+        sources.append(
+            EvidenceSource(
+                source_type="file_content",
+                path=path,
+                matched_text=text,
+            )
+        )
+
+    return sources
+
+
+def _format_file_content_sources(sources: Iterable[EvidenceSource], *, fallback: str) -> str:
+    chunks = [
+        f"--- {source.path} ---\n{source.matched_text}"
+        for source in sources
+        if source.source_type == "file_content" and source.path
+    ]
+    return "\n\n".join(chunks) if chunks else fallback
+
+
+def _reality_context_for_leaf(leaf: Mapping[str, Any], reality_context: str) -> str:
+    """Filter scorer context to the evidence sources eligible for one leaf category."""
+
+    category = str(leaf.get("category", "unknown"))
+    content_sources = [
+        source
+        for source in _iter_reality_sources(reality_context)
+        if source.source_type == "file_content" and source.path
+    ]
+
+    if category == "code_development":
+        eligible = [
+            source
+            for source in content_sources
+            if str(source.path).startswith("/workspace/submission/")
+            and not _skip_reality_file_contents(str(source.path))
+        ]
+        return _format_file_content_sources(
+            eligible,
+            fallback="(no eligible /workspace/submission implementation evidence was captured)",
+        )
+
+    if category in {"execution", "result_match"}:
+        eligible = [
+            source
+            for source in content_sources
+            if str(source.path).startswith("/workspace/output/")
+            and not _skip_reality_file_contents(str(source.path))
+        ]
+        return _format_file_content_sources(
+            eligible,
+            fallback="(no eligible /workspace/output artifact evidence was captured)",
+        )
+
+    return reality_context
+
+
+def _quote_variants(evidence_quote: str) -> list[str]:
+    quote = evidence_quote.strip()
+    if not quote:
+        return []
+    variants = [quote]
+    if len(quote) >= 2 and quote[0] == quote[-1] and quote[0] in {'"', "'", "`"}:
+        variants.append(quote[1:-1].strip())
+    return [variant for index, variant in enumerate(variants) if variant and variant not in variants[:index]]
+
+
+def _strip_leading_line_whitespace(text: str) -> str:
+    return "\n".join(line.lstrip() for line in text.strip().splitlines())
+
+
+def _strip_all_whitespace(text: str) -> str:
+    compact = re.sub(r"\s+", "", text)
+    return re.sub(r",([)\]}])", r"\1", compact)
+
+
+def _source_contains_quote(source: EvidenceSource, candidate: str) -> bool:
+    """Return whether candidate is a defensible quote from one reality source.
+
+    Judges sometimes include the `--- path ---` content-block header in an
+    otherwise exact quote, or drop leading indentation from Python snippets.
+    Accept those narrow forms while still rejecting bare header/path evidence.
+    """
+
+    if candidate in source.matched_text:
+        return True
+
+    header = f"--- {source.path} ---" if source.source_type == "file_content" and source.path else ""
+    if header and candidate.startswith(header):
+        body_candidate = candidate[len(header) :].lstrip("\n")
+        if not body_candidate.strip():
+            return False
+        if body_candidate in source.matched_text:
+            return True
+        if _strip_leading_line_whitespace(body_candidate) in _strip_leading_line_whitespace(
+            source.matched_text
+        ):
+            return True
+
+    if "\n" in candidate and _strip_leading_line_whitespace(candidate) in _strip_leading_line_whitespace(
+        source.matched_text
+    ):
+        return True
+
+    if (
+        source.source_type == "file_content"
+        and source.path
+        and str(source.path).startswith("/workspace/submission/")
+        and len(candidate) >= 40
+    ):
+        return _strip_all_whitespace(candidate) in _strip_all_whitespace(source.matched_text)
+
+    return False
+
+
+def _matching_evidence_sources(
+    reality_context: str, evidence_quote: str
+) -> list[EvidenceSource]:
+    """Locate all reality-context sources that contain the quoted evidence verbatim."""
+
+    matches: list[EvidenceSource] = []
+    seen: set[tuple[str, str | None, str]] = set()
+    for source in _iter_reality_sources(reality_context):
+        for candidate in _quote_variants(evidence_quote):
+            if _source_contains_quote(source, candidate):
+                key = (source.source_type, source.path, candidate)
+                if key not in seen:
+                    matches.append(
+                        EvidenceSource(
+                            source_type=source.source_type,
+                            path=source.path,
+                            matched_text=candidate,
+                        )
+                    )
+                    seen.add(key)
+    return matches
+
+
+def _is_markdown_like(path: str | None) -> bool:
+    if not path:
+        return False
+    return Path(path).suffix.lower() in _MARKDOWN_EXTENSIONS
+
+
+def _is_readme_like(path: str | None) -> bool:
+    if not path:
+        return False
+    return Path(path).name.lower().startswith("readme")
+
+
+def _skip_reality_file_contents(path: str) -> bool:
+    """Keep scorer reality focused on executable code and measured artifacts."""
+
+    normalized = path.rstrip("/")
+    return (
+        _is_readme_like(normalized)
+        or _is_markdown_like(normalized)
+        or normalized == "/workspace/output/submission_manifest.json"
+    )
+
+
+def _is_submission_python_source(path: str) -> bool:
+    return path.startswith("/workspace/submission/") and Path(path).suffix.lower() == ".py"
+
+
+def _focused_source_excerpt(contents: str, *, max_chars: int) -> str:
+    """Return actual source lines sampled across implementation-relevant regions."""
+
+    if len(contents) <= max_chars:
+        return contents
+
+    lines = contents.splitlines()
+    if not lines:
+        return contents[:max_chars]
+
+    selected_ranges: list[tuple[int, int]] = []
+
+    def add_range(start: int, end: int) -> None:
+        bounded_start = max(0, start)
+        bounded_end = min(len(lines), end)
+        if bounded_start < bounded_end:
+            selected_ranges.append((bounded_start, bounded_end))
+
+    prologue_lines = 90 if max_chars >= 5000 else 24
+    tail_lines = 90 if max_chars >= 5000 else 24
+
+    add_range(0, prologue_lines)
+
+    lowered_lines = [line.lower() for line in lines]
+    for pattern in _SOURCE_FOCUS_PATTERNS:
+        lowered_pattern = pattern.lower()
+        for line_index, line in enumerate(lowered_lines):
+            if lowered_pattern in line:
+                add_range(line_index - 4, line_index + 16)
+                break
+
+    add_range(len(lines) - tail_lines, len(lines))
+
+    used_lines: set[int] = set()
+    chunks: list[str] = []
+    total = 0
+    last_line: int | None = None
+    for start, end in selected_ranges:
+        indices = [index for index in range(start, end) if index not in used_lines]
+        if not indices:
+            continue
+
+        needs_gap = last_line is not None and indices[0] > last_line + 1
+        pieces: list[str] = []
+        if needs_gap:
+            pieces.append("[...source excerpt gap...]")
+        pieces.extend(lines[index] for index in indices)
+        chunk = "\n".join(pieces)
+        addition = ("\n" if chunks else "") + chunk
+        if total + len(addition) > max_chars:
+            remaining = max_chars - total
+            if remaining > 0:
+                chunks.append(addition[:remaining].rstrip())
+            break
+
+        chunks.append(addition)
+        total += len(addition)
+        used_lines.update(indices)
+        last_line = max(indices)
+
+    excerpt = "".join(chunks).strip()
+    if not excerpt:
+        return contents[:max_chars]
+    marker = "\n[truncated to focused source excerpts]"
+    if len(excerpt) + len(marker) <= max_chars:
+        return excerpt + marker
+    if max_chars > len(marker):
+        return excerpt[: max_chars - len(marker)].rstrip() + marker
+    return excerpt[:max_chars]
+
+
+def _looks_like_path_text(text: str) -> bool:
+    stripped = text.strip().strip('"').strip("'").strip("`")
+    if not stripped or any(ch.isspace() for ch in stripped):
+        return False
+    if stripped.startswith("/workspace/"):
+        return True
+    return "/" in stripped and "." in Path(stripped).name
+
+
+def _looks_like_benchmark_comparator_metric(text: str) -> bool:
+    stripped = text.strip().strip('"').strip("'").strip("`").lower()
+    if not stripped:
+        return False
+    comparator_patterns = (
+        r"(?:^|[_\W])rbo(?:$|[_\W])",
+        r"(?:^|[_\W])overlap(?:$|[_\W])",
+        r"(?:^|[_\W])ari(?:$|[_\W])",
+        r"(?:^|[_\W])pearson(?:$|[_\W])",
+        r"(?:^|[_\W])spearman(?:$|[_\W])",
+        r"(?:^|[_\W])correlation(?:$|[_\W])",
+    )
+    return any(re.search(pattern, stripped) for pattern in comparator_patterns)
+
+
+def _is_valid_execution_evidence_source(match: EvidenceSource) -> bool:
+    return (
+        match.source_type == "file_content"
+        and bool(match.path)
+        and str(match.path).startswith("/workspace/output/")
+        and not _is_readme_like(match.path)
+        and not _looks_like_path_text(match.matched_text)
+        and not _looks_like_benchmark_comparator_metric(match.matched_text)
+    )
+
+
+def _allowed_evidence_for_leaf(
+    leaf: Mapping[str, Any],
+    matches: list[EvidenceSource],
+) -> bool:
+    category = str(leaf.get("category", "unknown"))
+
+    if matches and all(_is_readme_like(match.path) for match in matches if match.path):
+        return False
+
+    if category == "code_development":
+        return any(
+            match.source_type == "file_content"
+            and bool(match.path)
+            and str(match.path).startswith("/workspace/submission/")
+            and not _is_markdown_like(match.path)
+            for match in matches
+        )
+
+    if category == "execution":
+        return any(_is_valid_execution_evidence_source(match) for match in matches)
+
+    if category == "result_match":
+        return any(
+            match.source_type == "file_content"
+            and bool(match.path)
+            and str(match.path).startswith("/workspace/output/")
+            and not _is_readme_like(match.path)
+            for match in matches
+        )
+
+    return bool(matches)
+
+
+def _evidence_policy_failure_reason(
+    leaf: Mapping[str, Any],
+    matches: list[EvidenceSource],
+) -> str:
+    category = str(leaf.get("category", "unknown"))
+    if not matches:
+        return "evidence_quote was not found verbatim in scorer reality context"
+    if matches and all(_is_readme_like(match.path) for match in matches if match.path):
+        return "README-style prose is not valid passing evidence"
+    if category == "code_development":
+        return (
+            "code_development leaves require non-markdown submission-file content, "
+            "not planning prose or README text"
+        )
+    if category == "execution":
+        output_path_matches = [
+            match
+            for match in matches
+            if match.path
+            and str(match.path).startswith("/workspace/output/")
+            and not _is_readme_like(match.path)
+        ]
+        if output_path_matches and not any(
+            _is_valid_execution_evidence_source(match) for match in output_path_matches
+        ):
+            return (
+                "execution leaves require concrete written outputs or runtime text, "
+                "not bare output-file paths or hidden-reference comparison metrics"
+            )
+        return (
+            "execution leaves require a non-README output artifact or output-derived "
+            "evidence, not submission-side planning prose"
+        )
+    if category == "result_match":
+        return (
+            "result_match leaves require non-README output-file content, not "
+            "submission-side claims or code comments"
+        )
+    return "evidence source did not satisfy leaf policy"
+
+
+def _enforce_leaf_evidence_policy(
+    leaf: Mapping[str, Any],
+    judgement: LeafJudgement,
+    *,
+    reality_context: str,
+) -> LeafJudgement:
+    """Zero unsupported passing judgements whose evidence lacks valid provenance."""
+
+    if judgement.score != 1:
+        return judgement
+
+    matches = _matching_evidence_sources(reality_context, judgement.evidence_quote)
+    if _allowed_evidence_for_leaf(leaf, matches):
+        metadata = dict(judgement.metadata)
+        metadata["evidence_sources"] = [match.to_dict() for match in matches]
+        return LeafJudgement(
+            leaf_id=judgement.leaf_id,
+            expectations=judgement.expectations,
+            reality=judgement.reality,
+            evidence_quote=judgement.evidence_quote,
+            score=judgement.score,
+            confidence=judgement.confidence,
+            metadata=metadata,
+        )
+
+    reason = _evidence_policy_failure_reason(leaf, matches)
+    metadata = dict(judgement.metadata)
+    metadata.update(
+        {
+            "evidence_policy_failure": reason,
+            "original_score": judgement.score,
+            "original_evidence_quote": judgement.evidence_quote,
+            "evidence_sources": [match.to_dict() for match in matches],
+        }
+    )
+    return LeafJudgement(
+        leaf_id=judgement.leaf_id,
+        expectations=judgement.expectations,
+        reality=judgement.reality,
+        evidence_quote=f"evidence_policy_failed: {reason}",
+        score=0,
+        confidence=judgement.confidence,
+        metadata=metadata,
+    )
+
+
+async def _collect_submission_context(
+    max_chars: int = _JUDGE_MAX_SUBMISSION_CHARS,
+    per_file_chars: int = _JUDGE_MAX_SUBMISSION_FILE_CHARS,
+) -> str:
     """Read a compact summary of the agent's submission artifacts from the sandbox."""
 
     env = sandbox()
+    priority_paths = " ".join(f"'{path}'" for path in _SUBMISSION_CONTEXT_PRIORITY_PATHS)
     chunks: list[str] = []
     try:
         listing = await env.exec(
@@ -378,8 +897,22 @@ async def _collect_submission_context(max_chars: int = _JUDGE_MAX_SUBMISSION_CHA
                 "bash",
                 "-lc",
                 (
-                    "{ find /workspace/submission -maxdepth 4 -type f 2>/dev/null; "
-                    "find /workspace/output -maxdepth 4 -type f 2>/dev/null; } | head -40"
+                    "( for path in "
+                    + priority_paths
+                    + "; do [ -f \"$path\" ] && printf '%s\\n' \"$path\"; done; "
+                    "find /workspace/output -maxdepth 4 -type f "
+                    "! -iname 'README*' ! -iname '*.md' ! -iname '*.markdown' "
+                    "! -iname '*.rst' 2>/dev/null; "
+                    "find /workspace/submission -maxdepth 4 -type f "
+                    "! -iname 'README*' ! -iname '*.md' ! -iname '*.markdown' "
+                    "! -iname '*.rst' 2>/dev/null; "
+                    "find /workspace/output -maxdepth 4 -type f "
+                    "\\( -iname 'README*' -o -iname '*.md' -o -iname '*.markdown' "
+                    "-o -iname '*.rst' \\) 2>/dev/null; "
+                    "find /workspace/submission -maxdepth 4 -type f "
+                    "\\( -iname 'README*' -o -iname '*.md' -o -iname '*.markdown' "
+                    "-o -iname '*.rst' \\) 2>/dev/null; "
+                    ") | awk '!seen[$0]++' | head -40"
                 ),
             ]
         )
@@ -392,22 +925,36 @@ async def _collect_submission_context(max_chars: int = _JUDGE_MAX_SUBMISSION_CHA
 
     chunks.append("Submission file list:\n" + file_list)
     total = len(chunks[0])
-    budget = max_chars - total
 
     for path in file_list.splitlines():
         path = path.strip()
-        if not path or budget <= 0:
+        if not path:
+            continue
+        if _skip_reality_file_contents(path):
+            continue
+        header = f"\n--- {path} ---\n"
+        available = max_chars - total - len(header)
+        if available <= 0:
             break
         try:
             contents = await env.read_file(path)
         except Exception:
             continue
-        header = f"\n--- {path} ---\n"
-        snippet = contents[: max(budget - len(header), 0)]
+        if _is_submission_python_source(path):
+            snippet_limit = min(available, max(_JUDGE_MAX_SOURCE_FILE_CHARS, per_file_chars, 1))
+            snippet = _focused_source_excerpt(contents, max_chars=snippet_limit)
+        else:
+            snippet_limit = min(available, max(per_file_chars, 1))
+            snippet = contents[:snippet_limit]
         if not snippet:
-            break
+            continue
+        if len(contents) > len(snippet):
+            marker = "\n[truncated]"
+            remaining = available - len(snippet)
+            if remaining > 0:
+                snippet += marker[:remaining]
         chunks.append(header + snippet)
-        budget -= len(header) + len(snippet)
+        total += len(header) + len(snippet)
 
     return "\n".join(chunks)
 
@@ -432,24 +979,51 @@ async def _judge_leaf(
     paper_summary: str,
     reality_context: str,
 ) -> LeafJudgement:
-    prompt = format_leaf_judge_prompt(
+    base_prompt = format_leaf_judge_prompt(
         leaf,
         paper_summary=paper_summary,
         reality_context=reality_context,
     )
-    try:
-        result = await judge.generate(prompt)
-        raw = getattr(result, "completion", None) or str(result)
-        return parse_leaf_judgement(raw, expected_leaf_id=leaf["id"])
-    except Exception as exc:  # capture judge/model failures as leaf-level 0
-        return LeafJudgement(
-            leaf_id=str(leaf["id"]),
-            expectations="",
-            reality="",
-            evidence_quote=f"judge_error: {type(exc).__name__}: {exc}",
-            score=0,
-            metadata={"judge_failure": True},
-        )
+    prompt = base_prompt
+    attempts = 0
+    last_exc: Exception | None = None
+    for _ in range(_JUDGE_PARSE_RETRIES + 1):
+        attempts += 1
+        try:
+            result = await judge.generate(prompt)
+            raw = getattr(result, "completion", None) or str(result)
+            judgement = parse_leaf_judgement(raw, expected_leaf_id=leaf["id"])
+            if attempts > 1:
+                metadata = dict(judgement.metadata)
+                metadata["judge_attempts"] = attempts
+                judgement = LeafJudgement(
+                    leaf_id=judgement.leaf_id,
+                    expectations=judgement.expectations,
+                    reality=judgement.reality,
+                    evidence_quote=judgement.evidence_quote,
+                    score=judgement.score,
+                    confidence=judgement.confidence,
+                    metadata=metadata,
+                )
+            return judgement
+        except Exception as exc:  # capture judge/model failures as leaf-level 0
+            last_exc = exc
+            prompt = (
+                f"{base_prompt}\n\n"
+                f"Previous judge response was invalid: {type(exc).__name__}: {exc}\n"
+                "Return only one valid JSON object with a non-empty evidence_quote "
+                "copied verbatim from Observed reality. Do not include markdown "
+                "fences or commentary."
+            )
+
+    return LeafJudgement(
+        leaf_id=str(leaf["id"]),
+        expectations="",
+        reality="",
+        evidence_quote=f"judge_error: {type(last_exc).__name__}: {last_exc}",
+        score=0,
+        metadata={"judge_failure": True, "judge_attempts": attempts},
+    )
 
 
 if _HAS_INSPECT_SCORING:
@@ -523,11 +1097,16 @@ if _HAS_INSPECT_SCORING:
                             )
                         )
                         continue
+                    leaf_reality = _reality_context_for_leaf(leaf, reality)
                     judgements.append(
-                        await _judge_leaf(
-                            judge,
+                        _enforce_leaf_evidence_policy(
                             leaf,
-                            paper_summary=paper_summary,
+                            await _judge_leaf(
+                                judge,
+                                leaf,
+                                paper_summary=paper_summary,
+                                reality_context=leaf_reality,
+                            ),
                             reality_context=reality,
                         )
                     )

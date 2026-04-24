@@ -26,6 +26,15 @@ GeneLab_benchmark mixes Python ML code with R/Bioconductor-style normalization a
 ## Benchmark policy
 
 - For the reviewer path, using the published processed feature matrices is acceptable and preferred.
+- For the default reviewer path, start from `data/huggingface_dataset/A*_lomo/fold_*/train_X.csv` and `test_X.csv`, joined to `data/raw/GeneLab_benchmark/tasks/A*_lomo/fold_*/train_y.csv`, `test_y.csv`, `train_meta.csv`, and `test_meta.csv`.
+- Each tissue directory is only a container for `fold_*` subdirectories. Do not assume `train_X.csv`, `test_X.csv`, or `labels.csv` exist at the tissue root.
+- In the staged reviewer path, the sample IDs live in the first CSV column. Load `train_X.csv`, `test_X.csv`, `train_y.csv`, and `test_y.csv` with `index_col=0`, use the single numeric column in `train_y.csv` / `test_y.csv` as the binary target, and align all tables by shared sample IDs before fitting.
+- Treat `train_meta.csv` and `test_meta.csv` as descriptive mission/tissue metadata, not as substitute feature matrices or target columns for the main classifier.
+- Do not collapse the benchmark to one hard-coded demo fold. A minimal passing workflow should iterate real `fold_*` directories and aggregate the folds it actually ran.
+- For AUROC, use continuous scores such as `predict_proba` or `decision_function`, not hard class labels from `predict()`.
+- Required TSV outputs should contain real machine-readable rows. If a branch is incomplete, emit a structured status table rather than a one-line placeholder sentence.
+- The `data/huggingface_dataset/v4/`, `v5/`, and `v6/` evaluation JSON files are reference summaries for comparison, not substitute feature matrices for model fitting.
 - For `code_development`, a clear fold-aware implementation of the evaluation logic earns credit even if it substitutes one open-source package for another.
+- If `/workspace/submission/run.sh` is required, it should be a launcher for substantive source files under `/workspace/submission`, not the only place where the analysis logic lives.
 - For `result_match`, the submission must match the hidden reference outputs within the benchmark's numeric tolerances.
 - Any substitute that leaks held-out mission or tissue information should fail regardless of surface similarity.

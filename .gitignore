@@ -48,6 +48,7 @@ logs-*/
 *.eval
 eval_logs/
 submissions/
+*.log.gz
 
 # Docker state
 .docker-state/

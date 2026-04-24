@@ -14,7 +14,7 @@ try:
     from inspect_ai import Task, task
     from inspect_ai.agent import react
     from inspect_ai.dataset import Sample
-    from inspect_ai.tool import bash, python
+    from inspect_ai.tool import python
 except ModuleNotFoundError as exc:  # pragma: no cover - local fallback for import-only validation
     _INSPECT_IMPORT_ERROR = exc
 
@@ -51,24 +51,19 @@ except ModuleNotFoundError as exc:  # pragma: no cover - local fallback for impo
             "inspect-ai is required to construct SciReplicBench agents."
         ) from _INSPECT_IMPORT_ERROR
 
-    def bash(*args, **kwargs):  # type: ignore[override]
-        raise RuntimeError(
-            "inspect-ai is required to construct SciReplicBench agents."
-        ) from _INSPECT_IMPORT_ERROR
-
     def python(*args, **kwargs):  # type: ignore[override]
         raise RuntimeError(
             "inspect-ai is required to construct SciReplicBench agents."
         ) from _INSPECT_IMPORT_ERROR
 
 try:
-    from .tools import scratchpad
+    from .tools import guarded_bash, scratchpad, workspace_text_file
     from .scorers import rubric_tree_scorer
 except ImportError:  # pragma: no cover - file-based Inspect loading fallback
     PACKAGE_PARENT = Path(__file__).resolve().parent.parent
     if str(PACKAGE_PARENT) not in sys.path:
         sys.path.insert(0, str(PACKAGE_PARENT))
-    from scireplicbench.tools import scratchpad
+    from scireplicbench.tools import guarded_bash, scratchpad, workspace_text_file
     from scireplicbench.scorers import rubric_tree_scorer
 
 _JUDGE_MODEL_ENV = "SCIREPLICBENCH_JUDGE_MODEL"
@@ -144,6 +139,51 @@ def compose_file_for_paper(paper_id: str) -> Path:
     return COMPOSE_FILE
 
 
+def _should_stage_bundle_file(local_path: Path, paper_dir: Path) -> bool:
+    """Skip VCS internals that are irrelevant inside the sandbox."""
+
+    relative_path = local_path.relative_to(paper_dir)
+    relative_parts = relative_path.parts
+    relative_posix = relative_path.as_posix()
+    if ".git" in relative_parts:
+        return False
+    if "__pycache__" in relative_parts or local_path.suffix == ".pyc":
+        return False
+    if paper_dir.name == "genelab_benchmark":
+        raw_prefix = ("data", "raw", "GeneLab_benchmark")
+        task_prefix = ("data", "raw", "GeneLab_benchmark", "tasks")
+        if (
+            relative_posix.startswith("data/huggingface_dataset/v4/")
+            or relative_posix.startswith("data/huggingface_dataset/v5/")
+            or relative_posix.startswith("data/huggingface_dataset/v6/")
+            or relative_posix.startswith("data/raw/GeneLab_benchmark/evaluation/")
+            or relative_posix.startswith("data/raw/GeneLab_benchmark/processed/")
+            or relative_posix.startswith("data/raw/GeneLab_benchmark/docs/")
+            or relative_posix.startswith("data/raw/GeneLab_benchmark/figures/")
+        ):
+            return False
+        if relative_parts[:3] == raw_prefix:
+            if relative_parts[:4] != task_prefix:
+                return False
+        if relative_parts[:4] == task_prefix:
+            if len(relative_parts) == 4:
+                return False
+            task_group = relative_parts[4]
+            filename = relative_parts[-1]
+            if task_group == "README.md" or not task_group.startswith("A"):
+                return False
+            if not (paper_dir / "data" / "huggingface_dataset" / task_group).is_dir():
+                return False
+            if filename in {
+                "selected_genes.txt",
+                "fold_info.json",
+                "task_info.json",
+                "geneformer_v1_tokenize_summary.json",
+            }:
+                return False
+    return True
+
+
 def _paper_bundle_file_map(paper_id: str) -> dict[str, str]:
     paper_dir = PAPERS_DIR / paper_id
     if not paper_dir.exists():
@@ -151,6 +191,8 @@ def _paper_bundle_file_map(paper_id: str) -> dict[str, str]:
 
     files: dict[str, str] = {}
     for local_path in sorted(path for path in paper_dir.rglob("*") if path.is_file()):
+        if not _should_stage_bundle_file(local_path, paper_dir):
+            continue
         relative = local_path.relative_to(paper_dir).as_posix()
         files[f"agent:/workspace/input/paper_bundle/{relative}"] = str(local_path)
         files[f"reproducer:/workspace/input/paper_bundle/{relative}"] = str(local_path)
@@ -169,6 +211,11 @@ def _sample_setup_script() -> str:
         mkdir -p /workspace/output/reproducer
         mkdir -p /workspace/logs
 
+        if [ -d /workspace/input/paper_bundle/starter ]; then
+          cp -R /workspace/input/paper_bundle/starter/. /workspace/submission/
+          chmod 0555 /workspace/submission/run.sh || true
+        fi
+
         chmod -R a+rX /workspace/input || true
         """
     )
@@ -178,6 +225,35 @@ def _bullet_block(items: list[str]) -> str:
     return "\n".join(f"- {item}" for item in items)
 
 
+def _starter_block(record: dict[str, Any]) -> str:
+    starter_files = record.get("starter_files", [])
+    if not starter_files:
+        return ""
+    bullets = _bullet_block(
+        [f"`/workspace/input/paper_bundle/{path}`" for path in starter_files]
+    )
+    seeded_submission_note = ""
+    if record.get("seed_submission_from_starter"):
+        seeded_submission_note = (
+            "\n- For GeneLab, the same baseline files are already seeded under "
+            "`/workspace/submission`, so run them in place before deciding what to rewrite."
+        )
+    return dedent(
+        f"""\
+
+        Starter files available for this paper:
+        {bullets}
+        - For this paper, prefer copying/adapting these starter files into the matching paths under `/workspace/submission` rather than starting from a blank script.
+        - For GeneLab, these files already implement a runnable reviewer-path baseline, so preserve the fold discovery and structured outputs unless you have a better benchmark-consistent replacement.
+        - Keep the seeded `/workspace/submission/run.sh` launcher intact and put substantive edits in Python source files under `/workspace/submission` instead of rewriting the launcher from scratch.
+        - The seeded launcher includes required artifact checks, a primary-script timeout, and fallback to the pristine staged starter; preserve those guardrails if you inspect or lightly edit `run.sh`.
+        - The benchmark tools may reject attempts to overwrite the seeded GeneLab `run.sh`; edit `/workspace/submission/main_analysis.py` or add helper source files instead.
+        - Do not replace the runnable GeneLab baseline with a shorter placeholder or file-enumeration stub; if you edit it, preserve the required output writers and the saved launcher workflow.
+        {seeded_submission_note}
+        """
+    )
+
+
 def build_sample_input(record: dict[str, Any]) -> str:
     """Render the agent-facing prompt for a single manifest record."""
 
@@ -185,6 +261,7 @@ def build_sample_input(record: dict[str, Any]) -> str:
     outputs = _bullet_block(record["required_outputs"])
     success_checks = _bullet_block(record["success_checks"])
     public_sources = _bullet_block(record["public_data_sources"])
+    starter_block = _starter_block(record)
 
     return dedent(
         f"""\
@@ -207,12 +284,20 @@ def build_sample_input(record: dict[str, Any]) -> str:
 
         Public data / code sources expected by this paper package:
         {public_sources}
+        {starter_block}
 
         Reproducibility contract:
         - Write agent-authored scripts, notebooks, configs, and rerun instructions under `/workspace/submission`.
+        - If `/workspace/submission/run.sh` is a required output, use it as a thin launcher that calls substantive source files under `/workspace/submission` (for example `.py`, `.R`, or notebook-backed workflows) rather than placing the whole analysis or planning notes directly in `run.sh`.
+        - Put the main analysis logic in saved source files under `/workspace/submission` before running it. Work that exists only inside ad-hoc `python()` tool calls or scratchpad notes will not survive the reproducer pass and should be treated as disposable exploration only.
+        - Prefer the `workspace_text_file` tool for exact multi-line source files, launcher scripts, README files, manifests, and small text outputs. Use `bash` for directory creation and program execution, not fragile shell-quoted file bodies.
+        - When writing multi-line code or documentation files, prefer heredocs or another method that preserves real newlines. Avoid `echo "...\\n..."` patterns for substantive files because they often create broken one-line outputs.
+        - Before you submit, execute the saved workflow from `/workspace/submission` (for example via `run.sh` or the project entrypoint), inspect the resulting files under `{record["primary_output_root"]}`, and make sure they contain real outputs rather than empty placeholders.
         - Write analysis outputs from this run under `{record["primary_output_root"]}`.
         - Assume a fresh `reproducer` container will later receive `/workspace/submission` as a read-only input and will rerun against the same `/workspace/input/paper_bundle`.
         - Do not rely on shell history, unstaged temp files, or state outside `/workspace/submission` and `{record["primary_output_root"]}`.
+        - Do not copy scratchpad or planning text into deliverable files; the deliverables must be runnable code or explicit documentation.
+        - Do not create empty files with `touch` just to satisfy required outputs. Required outputs should be generated or filled by the saved workflow whenever the task is feasible.
         - If a benchmark-prepared input is missing, stage the workflow honestly and document the remaining gap instead of fabricating results.
 
         Required outputs:
@@ -274,7 +359,7 @@ def _paper_task(
                 "Reproduce a computational-biology paper analysis inside a sandboxed "
                 "benchmark environment and leave a rerunnable submission package."
             ),
-            tools=[bash(), python(), scratchpad()],
+            tools=[guarded_bash(), python(), scratchpad(), workspace_text_file()],
             attempts=attempts,
         ),
         scorer=rubric_tree_scorer(judge_model=judge_model),
