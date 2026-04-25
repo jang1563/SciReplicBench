@@ -9,5 +9,366 @@
     "judge_scores": "Object mapping judge model IDs to binary scores",
     "metadata": "Optional object with run_id, evidence_quote_present, notes, or calibration tags"
   },
-  "human_grades": []
+  "human_grades": [
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/code_development/datasets_and_containers/load_visium_dataset",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/datasets_and_containers/load_visium_dataset",
+      "human_scores": {
+        "reviewer_provisional": 0
+      },
+      "judge_scores": {
+        "openai/gpt-4o-mini": 0
+      },
+      "metadata": {
+        "run_id": "GaKiuf8G",
+        "sample_id": "squidpy_spatial_main",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "FAIL: the run mentions a load_datasets.py script but does not show use of the official built-in Visium loader."
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/code_development/spatial_graph_neighbors/construct_geometry_aware_graph",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/spatial_graph_neighbors/construct_geometry_aware_graph",
+      "human_scores": {
+        "reviewer_provisional": 0
+      },
+      "judge_scores": {
+        "openai/gpt-4o-mini": 0
+      },
+      "metadata": {
+        "run_id": "GaKiuf8G",
+        "sample_id": "squidpy_spatial_main",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "FAIL: there is no concrete graph-building code or geometry-aware setting in the visible evidence."
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/code_development/spatial_statistics/run_moran_or_geary",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/spatial_statistics/run_moran_or_geary",
+      "human_scores": {
+        "reviewer_provisional": 0
+      },
+      "judge_scores": {
+        "openai/gpt-4o-mini": 0
+      },
+      "metadata": {
+        "run_id": "GaKiuf8G",
+        "sample_id": "squidpy_spatial_main",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "FAIL: a compute_statistics.py filename is not enough to show a real Moran/Geary workflow."
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/code_development/image_features_segmentation/compute_image_features",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/image_features_segmentation/compute_image_features",
+      "human_scores": {
+        "reviewer_provisional": 0
+      },
+      "judge_scores": {
+        "openai/gpt-4o-mini": 0
+      },
+      "metadata": {
+        "run_id": "GaKiuf8G",
+        "sample_id": "squidpy_spatial_main",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "FAIL: the feature family is not named explicitly and no real implementation is shown."
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features",
+      "human_scores": {
+        "reviewer_provisional": 0
+      },
+      "judge_scores": {
+        "openai/gpt-4o-mini": 1
+      },
+      "metadata": {
+        "run_id": "GaKiuf8G",
+        "sample_id": "squidpy_spatial_main",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "FAIL: this is one of the known README-mediated false positives from the v0.1 run."
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes",
+      "human_scores": {
+        "reviewer_provisional": 0
+      },
+      "judge_scores": {
+        "openai/gpt-4o-mini": 1
+      },
+      "metadata": {
+        "run_id": "GaKiuf8G",
+        "sample_id": "squidpy_spatial_main",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "FAIL: the v0.1 judge credited README prose and an assumption of successful execution rather than runtime evidence."
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/execution/spatial_graph_neighbors/nhood_enrichment_written",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/execution/spatial_graph_neighbors/nhood_enrichment_written",
+      "human_scores": {
+        "reviewer_provisional": 0
+      },
+      "judge_scores": {
+        "openai/gpt-4o-mini": 0
+      },
+      "metadata": {
+        "run_id": "GaKiuf8G",
+        "sample_id": "squidpy_spatial_main",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "FAIL: no written neighborhood-enrichment artifact is shown."
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/execution/spatial_statistics/moran_geary_written",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/execution/spatial_statistics/moran_geary_written",
+      "human_scores": {
+        "reviewer_provisional": 0
+      },
+      "judge_scores": {
+        "openai/gpt-4o-mini": 0
+      },
+      "metadata": {
+        "run_id": "GaKiuf8G",
+        "sample_id": "squidpy_spatial_main",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "FAIL: no Moran/Geary output artifact or ranked table is present."
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/result_match/spatial_statistics/top_moran_genes_overlap_threshold",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/result_match/spatial_statistics/top_moran_genes_overlap_threshold",
+      "human_scores": {
+        "reviewer_provisional": 0
+      },
+      "judge_scores": {
+        "openai/gpt-4o-mini": 0
+      },
+      "metadata": {
+        "run_id": "GaKiuf8G",
+        "sample_id": "squidpy_spatial_main",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "FAIL: no hidden-reference Moran overlap metric is provided."
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold",
+      "human_scores": {
+        "reviewer_provisional": 0
+      },
+      "judge_scores": {
+        "openai/gpt-4o-mini": 0
+      },
+      "metadata": {
+        "run_id": "GaKiuf8G",
+        "sample_id": "squidpy_spatial_main",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "FAIL: no Geary overlap metric is present in the submission materials."
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/code_development/datasets_and_containers/load_visium_dataset",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/datasets_and_containers/load_visium_dataset",
+      "human_scores": {
+        "reviewer_provisional": 1
+      },
+      "judge_scores": {
+        "openai/o3-mini": 1
+      },
+      "metadata": {
+        "run_id": "mZHU6eGr",
+        "sample_id": "squidpy_spatial_evidence_probe_control_pass",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "PASS: pipeline.py calls the official built-in Visium loader directly."
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/code_development/spatial_graph_neighbors/construct_geometry_aware_graph",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/spatial_graph_neighbors/construct_geometry_aware_graph",
+      "human_scores": {
+        "reviewer_provisional": 0
+      },
+      "judge_scores": {
+        "openai/o3-mini": 0
+      },
+      "metadata": {
+        "run_id": "mZHU6eGr",
+        "sample_id": "squidpy_spatial_evidence_probe_control_pass",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "FAIL: the control sample does not construct a spatial graph."
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/code_development/spatial_statistics/run_moran_or_geary",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/spatial_statistics/run_moran_or_geary",
+      "human_scores": {
+        "reviewer_provisional": 0
+      },
+      "judge_scores": {
+        "openai/o3-mini": 0
+      },
+      "metadata": {
+        "run_id": "mZHU6eGr",
+        "sample_id": "squidpy_spatial_evidence_probe_control_pass",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "FAIL: the control sample writes a Geary overlap metric but does not implement a real Moran/Geary workflow in code."
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/code_development/image_features_segmentation/compute_image_features",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/image_features_segmentation/compute_image_features",
+      "human_scores": {
+        "reviewer_provisional": 1
+      },
+      "judge_scores": {
+        "openai/o3-mini": 1
+      },
+      "metadata": {
+        "run_id": "mZHU6eGr",
+        "sample_id": "squidpy_spatial_evidence_probe_control_pass",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "PASS: the submission explicitly computes an image-feature family and names it as segmentation."
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features",
+      "human_scores": {
+        "reviewer_provisional": 1
+      },
+      "judge_scores": {
+        "openai/o3-mini": 1
+      },
+      "metadata": {
+        "run_id": "mZHU6eGr",
+        "sample_id": "squidpy_spatial_evidence_probe_control_pass",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "PASS: the exact Squidpy call computes segmentation-derived features and stores them under a segmentation key."
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes",
+      "human_scores": {
+        "reviewer_provisional": 1
+      },
+      "judge_scores": {
+        "openai/o3-mini": 1
+      },
+      "metadata": {
+        "run_id": "mZHU6eGr",
+        "sample_id": "squidpy_spatial_evidence_probe_control_pass",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "PASS: run.log explicitly states that sq.datasets.visium_hne_adata() completed successfully."
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/execution/spatial_graph_neighbors/nhood_enrichment_written",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/execution/spatial_graph_neighbors/nhood_enrichment_written",
+      "human_scores": {
+        "reviewer_provisional": 0
+      },
+      "judge_scores": {
+        "openai/o3-mini": 0
+      },
+      "metadata": {
+        "run_id": "mZHU6eGr",
+        "sample_id": "squidpy_spatial_evidence_probe_control_pass",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "FAIL: geary_metrics.txt is not a neighborhood-enrichment output."
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/execution/spatial_statistics/moran_geary_written",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/execution/spatial_statistics/moran_geary_written",
+      "human_scores": {
+        "reviewer_provisional": 0
+      },
+      "judge_scores": {
+        "openai/o3-mini": 1
+      },
+      "metadata": {
+        "run_id": "mZHU6eGr",
+        "sample_id": "squidpy_spatial_evidence_probe_control_pass",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "FAIL: the output only writes a hidden-reference overlap metric (geary_top20_rbo), not a Moran/Geary result artifact or ranked table."
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/result_match/spatial_statistics/top_moran_genes_overlap_threshold",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/result_match/spatial_statistics/top_moran_genes_overlap_threshold",
+      "human_scores": {
+        "reviewer_provisional": 0
+      },
+      "judge_scores": {
+        "openai/o3-mini": 0
+      },
+      "metadata": {
+        "run_id": "mZHU6eGr",
+        "sample_id": "squidpy_spatial_evidence_probe_control_pass",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "FAIL: the file reports a Geary overlap metric, not a Moran overlap metric."
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold",
+      "human_scores": {
+        "reviewer_provisional": 1
+      },
+      "judge_scores": {
+        "openai/o3-mini": 1
+      },
+      "metadata": {
+        "run_id": "mZHU6eGr",
+        "sample_id": "squidpy_spatial_evidence_probe_control_pass",
+        "provisional_single_rater": true,
+        "evidence_quote_present": true,
+        "notes": "PASS: geary_metrics.txt reports geary_top20_rbo=0.90, which exceeds the leaf threshold of 0.65."
+      }
+    }
+  ]
 }

@@ -23,6 +23,20 @@
     "working_limit_seconds": 5400,
     "cost_limit_usd": 2.5,
     "metadata": {},
+    "readiness_gate": {
+      "phase": "phase4a_pilot",
+      "paper_id": "inspiration4_multiome",
+      "lane": "enablement",
+      "run_allowed": false,
+      "pilot_ready": false,
+      "production_ready": false,
+      "blocking_reasons": [
+        "benchmark-ready AnnData or MuData object is not staged under papers/inspiration4_multiome/data/cache"
+      ],
+      "advisories": []
+    },
+    "judge_self_consistency_n": 1,
+    "judge_self_consistency_min_confidence": 0.6,
     "run_id": "phase4a_pilot__inspiration4_multiome__gpt-4o-mini__seed1",
     "inspect_eval_command": [
       "inspect",
@@ -42,6 +56,10 @@
       "paper_id=inspiration4_multiome",
       "--metadata",
       "seed=1",
+      "--metadata",
+      "judge_self_consistency_n=1",
+      "--metadata",
+      "judge_self_consistency_min_confidence=0.60",
       "--model-role",
       "grader=openai/gpt-4o-mini",
       "--message-limit",
@@ -80,6 +98,20 @@
     "working_limit_seconds": 5400,
     "cost_limit_usd": 2.5,
     "metadata": {},
+    "readiness_gate": {
+      "phase": "phase4a_pilot",
+      "paper_id": "inspiration4_multiome",
+      "lane": "enablement",
+      "run_allowed": false,
+      "pilot_ready": false,
+      "production_ready": false,
+      "blocking_reasons": [
+        "benchmark-ready AnnData or MuData object is not staged under papers/inspiration4_multiome/data/cache"
+      ],
+      "advisories": []
+    },
+    "judge_self_consistency_n": 1,
+    "judge_self_consistency_min_confidence": 0.6,
     "run_id": "phase4a_pilot__inspiration4_multiome__claude-haiku-4-5__seed1",
     "inspect_eval_command": [
       "inspect",
@@ -99,6 +131,10 @@
       "paper_id=inspiration4_multiome",
       "--metadata",
       "seed=1",
+      "--metadata",
+      "judge_self_consistency_n=1",
+      "--metadata",
+      "judge_self_consistency_min_confidence=0.60",
       "--model-role",
       "grader=openai/gpt-4o-mini",
       "--message-limit",
@@ -135,6 +171,20 @@
     "working_limit_seconds": 5400,
     "cost_limit_usd": 2.5,
     "metadata": {},
+    "readiness_gate": {
+      "phase": "phase4a_pilot",
+      "paper_id": "inspiration4_multiome",
+      "lane": "enablement",
+      "run_allowed": false,
+      "pilot_ready": false,
+      "production_ready": false,
+      "blocking_reasons": [
+        "benchmark-ready AnnData or MuData object is not staged under papers/inspiration4_multiome/data/cache"
+      ],
+      "advisories": []
+    },
+    "judge_self_consistency_n": 1,
+    "judge_self_consistency_min_confidence": 0.6,
     "run_id": "phase4a_pilot__inspiration4_multiome__deepseek-v3__seed1",
     "inspect_eval_command": [
       "inspect",
@@ -154,6 +204,10 @@
       "paper_id=inspiration4_multiome",
       "--metadata",
       "seed=1",
+      "--metadata",
+      "judge_self_consistency_n=1",
+      "--metadata",
+      "judge_self_consistency_min_confidence=0.60",
       "--model-role",
       "grader=openai/gpt-4o-mini",
       "--message-limit",
@@ -190,6 +244,20 @@
     "working_limit_seconds": 3600,
     "cost_limit_usd": 2.5,
     "metadata": {},
+    "readiness_gate": {
+      "phase": "phase4a_pilot",
+      "paper_id": "squidpy_spatial",
+      "lane": "evaluation",
+      "run_allowed": true,
+      "pilot_ready": true,
+      "production_ready": false,
+      "blocking_reasons": [],
+      "advisories": [
+        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
+      ]
+    },
+    "judge_self_consistency_n": 1,
+    "judge_self_consistency_min_confidence": 0.6,
     "run_id": "phase4a_pilot__squidpy_spatial__gpt-4o-mini__seed1",
     "inspect_eval_command": [
       "inspect",
@@ -209,6 +277,10 @@
       "paper_id=squidpy_spatial",
       "--metadata",
       "seed=1",
+      "--metadata",
+      "judge_self_consistency_n=1",
+      "--metadata",
+      "judge_self_consistency_min_confidence=0.60",
       "--model-role",
       "grader=openai/gpt-4o-mini",
       "--message-limit",
@@ -247,6 +319,20 @@
     "working_limit_seconds": 3600,
     "cost_limit_usd": 2.5,
     "metadata": {},
+    "readiness_gate": {
+      "phase": "phase4a_pilot",
+      "paper_id": "squidpy_spatial",
+      "lane": "evaluation",
+      "run_allowed": true,
+      "pilot_ready": true,
+      "production_ready": false,
+      "blocking_reasons": [],
+      "advisories": [
+        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
+      ]
+    },
+    "judge_self_consistency_n": 1,
+    "judge_self_consistency_min_confidence": 0.6,
     "run_id": "phase4a_pilot__squidpy_spatial__claude-haiku-4-5__seed1",
     "inspect_eval_command": [
       "inspect",
@@ -266,6 +352,10 @@
       "paper_id=squidpy_spatial",
       "--metadata",
       "seed=1",
+      "--metadata",
+      "judge_self_consistency_n=1",
+      "--metadata",
+      "judge_self_consistency_min_confidence=0.60",
       "--model-role",
       "grader=openai/gpt-4o-mini",
       "--message-limit",
@@ -302,6 +392,20 @@
     "working_limit_seconds": 3600,
     "cost_limit_usd": 2.5,
     "metadata": {},
+    "readiness_gate": {
+      "phase": "phase4a_pilot",
+      "paper_id": "squidpy_spatial",
+      "lane": "evaluation",
+      "run_allowed": true,
+      "pilot_ready": true,
+      "production_ready": false,
+      "blocking_reasons": [],
+      "advisories": [
+        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
+      ]
+    },
+    "judge_self_consistency_n": 1,
+    "judge_self_consistency_min_confidence": 0.6,
     "run_id": "phase4a_pilot__squidpy_spatial__deepseek-v3__seed1",
     "inspect_eval_command": [
       "inspect",
@@ -321,6 +425,10 @@
       "paper_id=squidpy_spatial",
       "--metadata",
       "seed=1",
+      "--metadata",
+      "judge_self_consistency_n=1",
+      "--metadata",
+      "judge_self_consistency_min_confidence=0.60",
       "--model-role",
       "grader=openai/gpt-4o-mini",
       "--message-limit",
@@ -357,6 +465,18 @@
     "working_limit_seconds": 5400,
     "cost_limit_usd": 2.5,
     "metadata": {},
+    "readiness_gate": {
+      "phase": "phase4a_pilot",
+      "paper_id": "genelab_benchmark",
+      "lane": "evaluation",
+      "run_allowed": true,
+      "pilot_ready": true,
+      "production_ready": false,
+      "blocking_reasons": [],
+      "advisories": []
+    },
+    "judge_self_consistency_n": 1,
+    "judge_self_consistency_min_confidence": 0.6,
     "run_id": "phase4a_pilot__genelab_benchmark__gpt-4o-mini__seed1",
     "inspect_eval_command": [
       "inspect",
@@ -376,6 +496,10 @@
       "paper_id=genelab_benchmark",
       "--metadata",
       "seed=1",
+      "--metadata",
+      "judge_self_consistency_n=1",
+      "--metadata",
+      "judge_self_consistency_min_confidence=0.60",
       "--model-role",
       "grader=openai/gpt-4o-mini",
       "--message-limit",
@@ -414,6 +538,18 @@
     "working_limit_seconds": 5400,
     "cost_limit_usd": 2.5,
     "metadata": {},
+    "readiness_gate": {
+      "phase": "phase4a_pilot",
+      "paper_id": "genelab_benchmark",
+      "lane": "evaluation",
+      "run_allowed": true,
+      "pilot_ready": true,
+      "production_ready": false,
+      "blocking_reasons": [],
+      "advisories": []
+    },
+    "judge_self_consistency_n": 1,
+    "judge_self_consistency_min_confidence": 0.6,
     "run_id": "phase4a_pilot__genelab_benchmark__claude-haiku-4-5__seed1",
     "inspect_eval_command": [
       "inspect",
@@ -433,6 +569,10 @@
       "paper_id=genelab_benchmark",
       "--metadata",
       "seed=1",
+      "--metadata",
+      "judge_self_consistency_n=1",
+      "--metadata",
+      "judge_self_consistency_min_confidence=0.60",
       "--model-role",
       "grader=openai/gpt-4o-mini",
       "--message-limit",
@@ -469,6 +609,18 @@
     "working_limit_seconds": 5400,
     "cost_limit_usd": 2.5,
     "metadata": {},
+    "readiness_gate": {
+      "phase": "phase4a_pilot",
+      "paper_id": "genelab_benchmark",
+      "lane": "evaluation",
+      "run_allowed": true,
+      "pilot_ready": true,
+      "production_ready": false,
+      "blocking_reasons": [],
+      "advisories": []
+    },
+    "judge_self_consistency_n": 1,
+    "judge_self_consistency_min_confidence": 0.6,
     "run_id": "phase4a_pilot__genelab_benchmark__deepseek-v3__seed1",
     "inspect_eval_command": [
       "inspect",
@@ -488,6 +640,10 @@
       "paper_id=genelab_benchmark",
       "--metadata",
       "seed=1",
+      "--metadata",
+      "judge_self_consistency_n=1",
+      "--metadata",
+      "judge_self_consistency_min_confidence=0.60",
       "--model-role",
       "grader=openai/gpt-4o-mini",
       "--message-limit",

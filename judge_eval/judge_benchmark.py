@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import random
 from collections import Counter
@@ -27,13 +28,40 @@ class GradeRecord:
 class ReliabilitySummary:
     """Aggregated reliability metrics."""
 
-    krippendorff_alpha: float
-    bootstrap_ci_low: float
-    bootstrap_ci_high: float
+    krippendorff_alpha: float | None
+    bootstrap_ci_low: float | None
+    bootstrap_ci_high: float | None
     items_scored: int
     raters_per_item_min: int
     raters_per_item_max: int
     judge_exact_match: dict[str, float]
+
+
+_BLINDED_PACKET_VISIBLE_FIELDS: tuple[str, ...] = (
+    "example_id",
+    "paper_id",
+    "leaf_id",
+    "category",
+    "requirement",
+    "grading_notes",
+    "evidence_quote",
+    "judge_reality",
+)
+
+_BLINDED_PACKET_HIDDEN_FIELDS: tuple[str, ...] = (
+    "run_id",
+    "sample_id",
+    "judge_model",
+    "judge_score",
+    "provisional_human_score",
+    "provisional_note",
+)
+
+_BLINDED_PACKET_RESPONSE_FIELDS: dict[str, str] = {
+    "rater_id": "Identifier for the second human reviewer",
+    "human_score": "Binary human score to fill in: 1 for pass, 0 for fail",
+    "note": "Short free-text rationale from the second reviewer",
+}
 
 
 def load_grade_records(path: str | Path) -> list[GradeRecord]:
@@ -152,11 +180,16 @@ def summarize_reliability(
     """Build the main reliability summary."""
 
     value_sets = [list(record.human_scores.values()) for record in records if record.human_scores]
-    alpha = krippendorff_alpha_nominal(value_sets)
-    ci_low, ci_high = bootstrap_alpha_ci(
-        value_sets, n_bootstrap=n_bootstrap, confidence=confidence, seed=seed
-    )
     rater_counts = [len(values) for values in value_sets] or [0]
+    if value_sets and min(rater_counts) >= 2:
+        alpha = krippendorff_alpha_nominal(value_sets)
+        ci_low, ci_high = bootstrap_alpha_ci(
+            value_sets, n_bootstrap=n_bootstrap, confidence=confidence, seed=seed
+        )
+    else:
+        alpha = None
+        ci_low = None
+        ci_high = None
     return ReliabilitySummary(
         krippendorff_alpha=alpha,
         bootstrap_ci_low=ci_low,
@@ -171,13 +204,23 @@ def summarize_reliability(
 def render_reliability_markdown(summary: ReliabilitySummary) -> str:
     """Render a markdown summary for the report."""
 
+    if summary.krippendorff_alpha is None:
+        alpha_line = "- Krippendorff's alpha: N/A (need >=2 human raters per item)"
+        ci_line = "- Bootstrap 95% CI: N/A"
+    else:
+        alpha_line = f"- Krippendorff's alpha: {summary.krippendorff_alpha:.3f}"
+        ci_line = (
+            f"- Bootstrap 95% CI: "
+            f"[{summary.bootstrap_ci_low:.3f}, {summary.bootstrap_ci_high:.3f}]"
+        )
+
     lines = [
         "# Judge Reliability",
         "",
         "## Human Agreement",
         "",
-        f"- Krippendorff's alpha: {summary.krippendorff_alpha:.3f}",
-        f"- Bootstrap 95% CI: [{summary.bootstrap_ci_low:.3f}, {summary.bootstrap_ci_high:.3f}]",
+        alpha_line,
+        ci_line,
         f"- Items scored: {summary.items_scored}",
         f"- Human raters per item: {summary.raters_per_item_min} to {summary.raters_per_item_max}",
         "",
@@ -190,6 +233,102 @@ def render_reliability_markdown(summary: ReliabilitySummary) -> str:
     else:
         lines.append("- No judge scores available yet.")
     return "\n".join(lines) + "\n"
+
+
+def build_blinded_review_packet(packet: dict[str, Any]) -> dict[str, Any]:
+    """Create a blinded second-rater packet from an annotated review packet."""
+
+    examples = packet.get("examples")
+    if not isinstance(examples, list):
+        raise ValueError("Review packet must contain an 'examples' list.")
+
+    blinded_examples: list[dict[str, Any]] = []
+    for example in examples:
+        blinded = {
+            field: example[field]
+            for field in _BLINDED_PACKET_VISIBLE_FIELDS
+            if field in example
+        }
+        blinded["response_template"] = {
+            "rater_id": "",
+            "human_score": None,
+            "note": "",
+        }
+        blinded_examples.append(blinded)
+
+    return {
+        "schema_version": packet.get("schema_version", "0.1.0"),
+        "description": (
+            "Blinded second-rater packet derived from an internal SciReplicBench review "
+            "packet. Judge outputs and provisional human grades are hidden to reduce bias."
+        ),
+        "source_description": packet.get("description", ""),
+        "hidden_fields": list(_BLINDED_PACKET_HIDDEN_FIELDS),
+        "response_fields": dict(_BLINDED_PACKET_RESPONSE_FIELDS),
+        "examples": blinded_examples,
+    }
+
+
+def blinded_review_packet_rows(packet: dict[str, Any]) -> list[dict[str, str]]:
+    """Flatten a blinded packet into rows suitable for CSV export."""
+
+    examples = packet.get("examples")
+    if not isinstance(examples, list):
+        raise ValueError("Blinded review packet must contain an 'examples' list.")
+
+    rows: list[dict[str, str]] = []
+    for example in examples:
+        response = example.get("response_template", {})
+        row = {
+            "example_id": str(example.get("example_id", "")),
+            "paper_id": str(example.get("paper_id", "")),
+            "leaf_id": str(example.get("leaf_id", "")),
+            "category": str(example.get("category", "")),
+            "requirement": str(example.get("requirement", "")),
+            "grading_notes": str(example.get("grading_notes", "")),
+            "evidence_quote": str(example.get("evidence_quote", "")),
+            "judge_reality": str(example.get("judge_reality", "")),
+            "rater_id": str(response.get("rater_id", "")),
+            "human_score": (
+                "" if response.get("human_score") is None else str(response.get("human_score"))
+            ),
+            "note": str(response.get("note", "")),
+        }
+        rows.append(row)
+    return rows
+
+
+def write_blinded_review_packet_outputs(
+    source_packet_path: str | Path,
+    *,
+    json_output_path: str | Path,
+    csv_output_path: str | Path,
+) -> dict[str, Any]:
+    """Read a review packet, write blinded JSON/CSV outputs, and return the JSON payload."""
+
+    packet = json.loads(Path(source_packet_path).read_text())
+    blinded = build_blinded_review_packet(packet)
+    Path(json_output_path).write_text(json.dumps(blinded, indent=2) + "\n")
+
+    rows = blinded_review_packet_rows(blinded)
+    fieldnames = [
+        "example_id",
+        "paper_id",
+        "leaf_id",
+        "category",
+        "requirement",
+        "grading_notes",
+        "evidence_quote",
+        "judge_reality",
+        "rater_id",
+        "human_score",
+        "note",
+    ]
+    with Path(csv_output_path).open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+    return blinded
 
 
 def main() -> None:

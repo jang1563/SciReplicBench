@@ -1,0 +1,71 @@
+{
+  "paper_id": "evidence_policy_probe",
+  "title": "Internal evidence-policy probe",
+  "doi": "internal-validation-harness",
+  "total_leaf_nodes": 3,
+  "result_match_policy": {
+    "dataset_snapshot_policy": "synthetic internal probe; compare only against the staged output artifacts",
+    "metrics": {
+      "rank_top_k_default": 20
+    }
+  },
+  "rubric": {
+    "id": "evidence_policy_probe/rubric",
+    "name": "Evidence Policy Probe",
+    "weight": 1.0,
+    "is_leaf": false,
+    "children": [
+      {
+        "id": "evidence_policy_probe/code_development",
+        "name": "Code Development",
+        "weight": 0.3,
+        "is_leaf": false,
+        "children": [
+          {
+            "id": "evidence_policy_probe/code_development/implements_pipeline",
+            "name": "Implement pipeline logic",
+            "weight": 1.0,
+            "is_leaf": true,
+            "requirement": "Stage agent-authored implementation code for the spatial-analysis pipeline under /workspace/submission.",
+            "grading_notes": "README planning prose does not count as implementation evidence for this probe.",
+            "category": "code_development"
+          }
+        ]
+      },
+      {
+        "id": "evidence_policy_probe/execution",
+        "name": "Execution",
+        "weight": 0.3,
+        "is_leaf": false,
+        "children": [
+          {
+            "id": "evidence_policy_probe/execution/runtime_completed",
+            "name": "Runtime completed",
+            "weight": 1.0,
+            "is_leaf": true,
+            "requirement": "Show runtime or output-artifact evidence that the staged workflow actually executed.",
+            "grading_notes": "A bare README claim is not execution evidence for this probe.",
+            "category": "execution"
+          }
+        ]
+      },
+      {
+        "id": "evidence_policy_probe/result_match",
+        "name": "Result Match",
+        "weight": 0.4,
+        "is_leaf": false,
+        "children": [
+          {
+            "id": "evidence_policy_probe/result_match/overlap_metric_reported",
+            "name": "Report overlap metric from outputs",
+            "weight": 1.0,
+            "is_leaf": true,
+            "requirement": "Report a benchmark-comparable overlap metric from a non-README output artifact.",
+            "grading_notes": "Submission-side metric assertions are intentionally invalid for this probe.",
+            "category": "result_match"
+          }
+        ]
+      }
+    ]
+  }
+}

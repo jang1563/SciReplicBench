@@ -1,0 +1,75 @@
+[
+  {
+    "id": "evidence_policy_probe_prose_fail",
+    "paper_id": "evidence_policy_probe",
+    "paper_title": "Internal evidence-policy probe",
+    "task_brief": "Stage a minimal precheck-passing submission that still tries to earn rubric credit from README-style prose and submission-side claims.",
+    "analysis_focus": [
+      "write at least one non-trivial Python file under /workspace/submission so the artifact-presence precheck passes",
+      "leave prose-shaped or submission-side evidence that would have looked plausible before the v0.3 scorer hardening",
+      "emit a minimal output artifact so the live Inspect scorer has a realistic file list to inspect"
+    ],
+    "required_outputs": [
+      "/workspace/submission/README.md",
+      "/workspace/submission/pipeline.py",
+      "/workspace/output/agent/results.txt"
+    ],
+    "success_checks": [
+      "the precheck passes because a non-trivial Python file exists under /workspace/submission",
+      "the sample still activates evidence_policy_failed on all three rubric leaves",
+      "the resulting eval log is small enough to keep as a deterministic regression artifact"
+    ],
+    "public_data_sources": [
+      "none; this is a synthetic internal validation harness"
+    ],
+    "reviewer_path": "This is not a scientific paper reproduction. Review it as a benchmark-policy probe: the submission should look superficially plausible while still being zeroed by the evidence policy.",
+    "novel_contrast_id": "probe_fail",
+    "primary_output_root": "/workspace/output/agent",
+    "agent_limits": {
+      "message_limit": 4,
+      "time_limit_minutes": 5,
+      "working_limit_minutes": 5
+    },
+    "resource_hints": {
+      "cpu_limit": "1.0",
+      "memory_limit": "1g"
+    }
+  },
+  {
+    "id": "evidence_policy_probe_control_pass",
+    "paper_id": "evidence_policy_probe",
+    "paper_title": "Internal evidence-policy probe",
+    "task_brief": "Stage the matching control submission where code, execution, and metric evidence all live in the correct non-README locations.",
+    "analysis_focus": [
+      "write a non-trivial Python implementation under /workspace/submission",
+      "emit runtime/output artifacts with captured content under /workspace/output",
+      "preserve a minimal control case where the exact same leaf-level judge passes survive scorer hardening"
+    ],
+    "required_outputs": [
+      "/workspace/submission/README.md",
+      "/workspace/submission/pipeline.py",
+      "/workspace/output/agent/results.log",
+      "/workspace/output/agent/metrics.txt"
+    ],
+    "success_checks": [
+      "the precheck passes",
+      "all three leaves survive because their evidence comes from valid non-README sources",
+      "the control sample makes it obvious that v0.4 is rejecting prose, not everything"
+    ],
+    "public_data_sources": [
+      "none; this is a synthetic internal validation harness"
+    ],
+    "reviewer_path": "Treat this as the control arm of the probe: the same rubric should now pass because the quoted evidence comes from implementation files and output artifacts, not README prose.",
+    "novel_contrast_id": "probe_control",
+    "primary_output_root": "/workspace/output/agent",
+    "agent_limits": {
+      "message_limit": 4,
+      "time_limit_minutes": 5,
+      "working_limit_minutes": 5
+    },
+    "resource_hints": {
+      "cpu_limit": "1.0",
+      "memory_limit": "1g"
+    }
+  }
+]

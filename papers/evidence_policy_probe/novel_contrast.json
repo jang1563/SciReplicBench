@@ -1,0 +1,6 @@
+{
+  "id": "evidence_policy_probe_internal",
+  "title": "Synthetic evidence-policy validation contrast",
+  "description": "Internal harness used to validate that README-style and submission-side claims are zeroed only after the artifact-presence precheck succeeds.",
+  "anti_memorization_role": "Not applicable; this is a synthetic local validation fixture."
+}

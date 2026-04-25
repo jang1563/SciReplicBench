@@ -8,8 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from . import PAPER_IDS
+from .readiness import phase_readiness_gate
 
 DEFAULT_TASK_SPEC = "src/scireplicbench/tasks.py@scireplicbench"
+_REALIGNMENT_NATIVE = True
 
 
 @dataclass
@@ -38,6 +40,15 @@ class RunPlanEntry:
     working_limit_seconds: int | None = None
     cost_limit_usd: float | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    readiness_gate: dict[str, Any] = field(default_factory=dict)
+    judge_self_consistency_n: int = 1
+    judge_self_consistency_min_confidence: float = 0.6
+
+    def __post_init__(self) -> None:
+        if not self.readiness_gate:
+            self.readiness_gate = phase_readiness_gate(self.paper_id, self.phase).to_dict()
+        if self.phase == "phase4b_production" and self.judge_self_consistency_n <= 1:
+            self.judge_self_consistency_n = 3
 
     @property
     def run_id(self) -> str:
@@ -64,6 +75,11 @@ class RunPlanEntry:
             f"paper_id={self.paper_id}",
             "--metadata",
             f"seed={self.seed}",
+            "--metadata",
+            f"judge_self_consistency_n={self.judge_self_consistency_n}",
+            "--metadata",
+            "judge_self_consistency_min_confidence="
+            f"{self.judge_self_consistency_min_confidence:.2f}",
             "--model-role",
             f"grader={self.judge.inspect_model}",
         ]
@@ -199,13 +215,16 @@ def render_plan_markdown(entries: list[RunPlanEntry]) -> str:
     lines = [
         "# Run Plan",
         "",
-        "| Phase | Paper | Agent | Judge | Seed | Cost Limit |",
-        "|---|---|---|---|---:|---:|",
+        "| Phase | Paper | Gate | Lane | Agent | Judge | Seed | Cost Limit |",
+        "|---|---|---|---|---|---|---:|---:|",
     ]
     for entry in entries:
+        gate_status = "ready" if entry.readiness_gate.get("run_allowed") else "blocked"
+        lane = entry.readiness_gate.get("lane", "evaluation")
         lines.append(
-            f"| {entry.phase} | {entry.paper_id} | {entry.agent.label} | "
-            f"{entry.judge.label} | {entry.seed} | {entry.cost_limit_usd or 0:.2f} |"
+            f"| {entry.phase} | {entry.paper_id} | {gate_status} | {lane} | "
+            f"{entry.agent.label} | {entry.judge.label} | {entry.seed} | "
+            f"{entry.cost_limit_usd or 0:.2f} |"
         )
     return "\n".join(lines) + "\n"
 
