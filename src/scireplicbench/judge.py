@@ -205,10 +205,12 @@ def format_leaf_judge_prompt(
         "- expectations: summarize what passing requires for this leaf.\n"
         "- reality: summarize what the submission actually did.\n"
         "- evidence_quote: quote the specific supporting text or command output verbatim.\n"
+        "- If score is 0 because no valid supporting evidence exists, set evidence_quote to exactly no_valid_evidence.\n"
         "- Prefer a short exact line or a few exact adjacent lines; do not merge multi-line source into one invented line.\n"
         "- Do not quote only a `--- path ---` content-block header; include concrete code or output content from below it.\n"
         "- score: 1 for pass, 0 for fail.\n"
-        "- evidence_quote must appear verbatim in Observed reality.\n"
+        "- For score 1, evidence_quote must appear verbatim in Observed reality.\n"
+        "- For score 0, evidence_quote should appear verbatim when possible; otherwise use no_valid_evidence.\n"
         "- Do not omit evidence_quote.\n"
         "- Do not infer unstated steps or substitute evidence from a different metric family.\n"
         "- Do not add markdown fences or commentary outside the JSON object."
@@ -267,10 +269,6 @@ def parse_leaf_judgement(
     else:
         raise ValueError(f"Unsupported score value: {score_raw}")
 
-    evidence_quote = str(payload["evidence_quote"]).strip()
-    if not evidence_quote:
-        raise ValueError("Judge evidence_quote must be non-empty.")
-
     confidence = payload.get("confidence")
     if confidence is not None:
         confidence = float(confidence)
@@ -280,6 +278,15 @@ def parse_leaf_judgement(
         metadata = {}
     if not isinstance(metadata, dict):
         raise ValueError("Judge metadata must be an object when provided.")
+
+    evidence_quote = str(payload["evidence_quote"]).strip()
+    if not evidence_quote:
+        if score == 0:
+            metadata = dict(metadata)
+            metadata["empty_evidence_quote_repaired"] = True
+            evidence_quote = "no_valid_evidence"
+        else:
+            raise ValueError("Judge evidence_quote must be non-empty.")
 
     return LeafJudgement(
         leaf_id=leaf_id,

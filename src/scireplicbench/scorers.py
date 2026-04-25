@@ -1029,9 +1029,11 @@ async def _judge_leaf(
             prompt = (
                 f"{base_prompt}\n\n"
                 f"Previous judge response was invalid: {type(exc).__name__}: {exc}\n"
-                "Return only one valid JSON object with a non-empty evidence_quote "
-                "copied verbatim from Observed reality. Do not include markdown "
-                "fences or commentary."
+                "Return only one valid JSON object. For score 1, evidence_quote must "
+                "be copied verbatim from Observed reality. For score 0, use a "
+                "verbatim supporting quote when possible, or set evidence_quote to "
+                "exactly no_valid_evidence when no valid supporting evidence exists. "
+                "Do not include markdown fences or commentary."
             )
 
     return LeafJudgement(

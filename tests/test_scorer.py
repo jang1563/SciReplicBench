@@ -238,7 +238,8 @@ class ScorerTest(unittest.TestCase):
                         {
                             "completion": (
                                 '{"leaf_id":"demo/result_match/leaf","expectations":"Recover the result.",'
-                                '"reality":"Observed the metric.","evidence_quote":"","score":0}'
+                                '"reality":"Observed the metric.","evidence_quote":"top20_overlap=0.90",'
+                                '"score":1'
                             )
                         },
                     )()
@@ -270,6 +271,7 @@ class ScorerTest(unittest.TestCase):
         self.assertEqual(judgement.score, 1)
         self.assertEqual(judgement.metadata["judge_attempts"], 2)
         self.assertIn("Previous judge response was invalid", stub.prompts[1])
+        self.assertIn("no_valid_evidence", stub.prompts[1])
 
     def test_leaf_score_map_from_judgements(self) -> None:
         judgements = [

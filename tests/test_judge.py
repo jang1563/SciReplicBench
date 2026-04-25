@@ -29,7 +29,8 @@ class JudgeHelpersTest(unittest.TestCase):
         )
         self.assertIn('"leaf_id":"..."', prompt)
         self.assertIn("evidence_quote", prompt)
-        self.assertIn("evidence_quote must appear verbatim", prompt)
+        self.assertIn("For score 1, evidence_quote must appear verbatim", prompt)
+        self.assertIn("no_valid_evidence", prompt)
 
     def test_prompt_adds_code_development_evidence_policy(self) -> None:
         prompt = format_leaf_judge_prompt(
@@ -139,6 +140,35 @@ class JudgeHelpersTest(unittest.TestCase):
         judgement = parse_leaf_judgement(raw, expected_leaf_id="demo/result_match/leaf_a")
         self.assertEqual(judgement.score, 1)
         self.assertEqual(judgement.evidence_quote, "top20_overlap=0.90")
+
+    def test_parse_leaf_judgement_repairs_empty_quote_for_zero_score(self) -> None:
+        judgement = parse_leaf_judgement(
+            {
+                "leaf_id": "demo/result_match/leaf_a",
+                "expectations": "Recover the top ranked genes.",
+                "reality": "No comparable output was present.",
+                "evidence_quote": "",
+                "score": 0,
+            },
+            expected_leaf_id="demo/result_match/leaf_a",
+        )
+
+        self.assertEqual(judgement.score, 0)
+        self.assertEqual(judgement.evidence_quote, "no_valid_evidence")
+        self.assertTrue(judgement.metadata["empty_evidence_quote_repaired"])
+
+    def test_parse_leaf_judgement_rejects_empty_quote_for_passing_score(self) -> None:
+        with self.assertRaisesRegex(ValueError, "evidence_quote must be non-empty"):
+            parse_leaf_judgement(
+                {
+                    "leaf_id": "demo/result_match/leaf_a",
+                    "expectations": "Recover the top ranked genes.",
+                    "reality": "Claims success.",
+                    "evidence_quote": "",
+                    "score": 1,
+                },
+                expected_leaf_id="demo/result_match/leaf_a",
+            )
 
     def test_majority_vote_and_retry_detection(self) -> None:
         judgements = [
