@@ -19,17 +19,19 @@ This note records the repo-local realignment work added after the baseline v1.2 
 
 ## Latest GeneLab Pilot
 
-The April 25, 2026 v18 `genelab_benchmark` pilot ran successfully after Docker Desktop was restarted and scorer evidence quote matching was relaxed for narrow quote-format artifacts.
+The April 25, 2026 v20 `genelab_benchmark` pilot ran successfully after the judge prompt/parser was hardened for zero-score responses with no valid supporting evidence. v20 reran the same patched state with `message_limit=100` after v19 hit the original 60-message cap.
 
-- Log: `logs/2026-04-25T13-05-03-00-00_scireplicbench_RPUHcHpkvMWpUARB7xJSzN.eval`
-- Trace: `logs-prod/inspect-trace-genelab-pilot-v18.log`
-- Score: `0.22688333333333333`
-- Category scores: `code_development=0.353`, `execution=0.4133333333333334`, `result_match=0.0`
-- Passed leaves: `13 / 55`
-- Judge failures: `10`
-- Precheck: `ok=true`, `nontrivial_py_files=2`, `output_artifact_count=9`
+- Log: `logs/2026-04-25T16-40-28-00-00_scireplicbench_5zsyi5gh9Bp7B79VPEdEbF.eval`
+- Trace: `logs-prod/inspect-trace-genelab-pilot-v20.log.gz`
+- Score: `0.15855`
+- Category scores: `code_development=0.253`, `execution=0.28`, `result_match=0.0`
+- Passed leaves: `9 / 55`
+- Judge failures: `1`
+- Zero-score `no_valid_evidence` responses: `40`
+- Sample limit: none
+- Precheck: `ok=true`, `nontrivial_py_files=4`, `output_artifact_count=9`
 
-Compared with v17, v18 confirms that the trailing-punctuation quote relaxation can rescue real code evidence, but the run was still lower overall than v17 (`0.31771666666666665`) because several execution and result-match leaves regressed under stochastic judge behavior. The next local lever is judge-output stability for failing result-match leaves and clearer output-side evidence selection for execution leaves; the starter fallback still produced the required machine-readable artifact families.
+Compared with v18, v20 reduced judge failures from `10` to `1`, confirming that the `no_valid_evidence` fallback removes most empty-quote validation failures. The remaining score drop from v18 (`0.22688333333333333`) and v17 (`0.31771666666666665`) is now attributable to agent-output quality rather than sample truncation: v20 recovered `load_feature_matrices`, `bootstrap_ci_written`, and `go_nogo_summary_written`, but lost several execution leaves such as `data_load_executes`, `classical_models_execute`, `preprocessed_matrix_written`, and `cross_mission_matrix_written`. The next local lever is to harden the GeneLab starter/fallback so it consistently executes the packaged workflow and writes the execution-side TSV artifacts before the agent begins optional extensions.
 
 ## Remaining Human/Data Inputs
 
