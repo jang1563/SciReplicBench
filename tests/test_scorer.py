@@ -487,6 +487,40 @@ class ScorerTest(unittest.TestCase):
         )
         self.assertEqual(hardened.score, 1)
 
+    def test_code_development_pass_survives_trailing_semicolon_quote_artifact(self) -> None:
+        reality = (
+            "Submission file list:\n"
+            "/workspace/submission/main_analysis.py\n"
+            "\n--- /workspace/submission/main_analysis.py ---\n"
+            "    model = RandomForestClassifier(\n"
+            "        n_estimators=24,\n"
+            "        max_features=\"sqrt\",\n"
+            "        class_weight=\"balanced_subsample\",\n"
+            "        random_state=42,\n"
+            "    )\n"
+        )
+        leaf = {
+            "id": "demo/code_development/leaf",
+            "category": "code_development",
+        }
+        judgement = LeafJudgement(
+            leaf_id="demo/code_development/leaf",
+            expectations="Fit random forest baseline.",
+            reality="Observed RandomForestClassifier code.",
+            evidence_quote=(
+                'model = RandomForestClassifier(n_estimators=24, max_features="sqrt", '
+                'class_weight="balanced_subsample", random_state=42);'
+            ),
+            score=1,
+        )
+
+        hardened = _enforce_leaf_evidence_policy(
+            leaf,
+            judgement,
+            reality_context=reality,
+        )
+        self.assertEqual(hardened.score, 1)
+
     def test_code_development_pass_survives_requirements_txt(self) -> None:
         reality = (
             "Submission file list:\n"
@@ -572,6 +606,37 @@ class ScorerTest(unittest.TestCase):
         self.assertEqual(
             hardened.metadata["evidence_sources"][0]["path"],
             "/workspace/output/results.tsv",
+        )
+
+    def test_execution_pass_survives_whitespace_normalized_tsv_header_quote(self) -> None:
+        reality = (
+            "Submission file list:\n"
+            "/workspace/output/agent/lomo/summary.tsv\n"
+            "\n--- /workspace/output/agent/lomo/summary.tsv ---\n"
+            "tissue\tfold\theldout_mission\tmodel\tstatus\tauroc\tci_lower\tci_upper\n"
+            "A2\tfold_RR-1_test\tRR-1\tElasticNetLogReg\tok\t0.7310\t0.6020\t0.8420\n"
+        )
+        leaf = {
+            "id": "demo/execution/leaf",
+            "category": "execution",
+        }
+        judgement = LeafJudgement(
+            leaf_id="demo/execution/leaf",
+            expectations="Write a LOMO AUROC table.",
+            reality="Observed LOMO summary TSV.",
+            evidence_quote="tissue fold heldout_mission model status auroc ci_lower ci_upper",
+            score=1,
+        )
+
+        hardened = _enforce_leaf_evidence_policy(
+            leaf,
+            judgement,
+            reality_context=reality,
+        )
+        self.assertEqual(hardened.score, 1)
+        self.assertEqual(
+            hardened.metadata["evidence_sources"][0]["path"],
+            "/workspace/output/agent/lomo/summary.tsv",
         )
 
     def test_execution_header_only_quote_is_zeroed(self) -> None:

@@ -567,15 +567,29 @@ def _strip_all_whitespace(text: str) -> str:
     return re.sub(r",([)\]}])", r"\1", compact)
 
 
+def _strip_trailing_quote_punctuation(text: str) -> str:
+    return "\n".join(line.rstrip().rstrip(";") for line in text.strip().splitlines())
+
+
+def _normalize_inline_whitespace(text: str) -> str:
+    return "\n".join(" ".join(line.split()) for line in text.strip().splitlines())
+
+
 def _source_contains_quote(source: EvidenceSource, candidate: str) -> bool:
     """Return whether candidate is a defensible quote from one reality source.
 
     Judges sometimes include the `--- path ---` content-block header in an
-    otherwise exact quote, or drop leading indentation from Python snippets.
-    Accept those narrow forms while still rejecting bare header/path evidence.
+    otherwise exact quote, drop leading indentation from Python snippets, or
+    normalize TSV spacing. Accept those narrow forms while still rejecting bare
+    header/path evidence.
     """
 
     if candidate in source.matched_text:
+        return True
+
+    if _normalize_inline_whitespace(candidate) in _normalize_inline_whitespace(
+        source.matched_text
+    ):
         return True
 
     header = f"--- {source.path} ---" if source.source_type == "file_content" and source.path else ""
@@ -601,7 +615,11 @@ def _source_contains_quote(source: EvidenceSource, candidate: str) -> bool:
         and str(source.path).startswith("/workspace/submission/")
         and len(candidate) >= 40
     ):
-        return _strip_all_whitespace(candidate) in _strip_all_whitespace(source.matched_text)
+        normalized_candidate = _strip_trailing_quote_punctuation(candidate)
+        normalized_source = _strip_trailing_quote_punctuation(source.matched_text)
+        return _strip_all_whitespace(normalized_candidate) in _strip_all_whitespace(
+            normalized_source
+        )
 
     return False
 
