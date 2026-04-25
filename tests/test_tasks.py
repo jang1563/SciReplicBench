@@ -51,6 +51,7 @@ class TaskConfigTest(unittest.TestCase):
         self.assertIn("already seeded under `/workspace/submission`", prompt)
         self.assertIn("Keep the seeded `/workspace/submission/run.sh` launcher intact", prompt)
         self.assertIn("primary-script timeout", prompt)
+        self.assertIn("run `bash /workspace/submission/run.sh` as the canonical saved workflow", prompt)
         self.assertIn("may reject attempts to overwrite the seeded GeneLab `run.sh`", prompt)
         self.assertIn("Do not replace the runnable GeneLab baseline", prompt)
 

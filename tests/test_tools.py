@@ -265,6 +265,32 @@ class ProtectedGeneLabSourceTest(unittest.TestCase):
         )
         self.assertIn("thin partial script", PROTECTED_GENELAB_SOURCE_MESSAGE)
 
+    def test_source_downgrade_guard_uses_starter_when_submission_missing(self) -> None:
+        class FakeEnv:
+            def __init__(self, files: dict[str, str]) -> None:
+                self.files = files
+
+            async def read_file(self, path: str) -> str:
+                if path not in self.files:
+                    raise FileNotFoundError(path)
+                return self.files[path]
+
+        shallow_replacement = (
+            "import pandas as pd\n"
+            "results_df.to_csv('/workspace/output/agent/lomo/summary.tsv', sep='\\t')\n"
+        )
+        env = FakeEnv({PROTECTED_STARTER_MAIN_ANALYSIS: self._rich_source()})
+
+        self.assertTrue(
+            asyncio.run(
+                _would_downgrade_protected_genelab_source(
+                    env,
+                    PROTECTED_SUBMISSION_MAIN_ANALYSIS,
+                    shallow_replacement,
+                )
+            )
+        )
+
     def test_source_append_guard_blocks_mutating_rich_seeded_source(self) -> None:
         class FakeEnv:
             def __init__(self, files: dict[str, str]) -> None:
@@ -296,6 +322,27 @@ class ProtectedGeneLabSourceTest(unittest.TestCase):
                 _would_append_to_protected_genelab_source(
                     env,
                     "/workspace/submission/helper.py",
+                )
+            )
+        )
+
+    def test_source_append_guard_uses_starter_when_submission_missing(self) -> None:
+        class FakeEnv:
+            def __init__(self, files: dict[str, str]) -> None:
+                self.files = files
+
+            async def read_file(self, path: str) -> str:
+                if path not in self.files:
+                    raise FileNotFoundError(path)
+                return self.files[path]
+
+        env = FakeEnv({PROTECTED_STARTER_MAIN_ANALYSIS: self._rich_source()})
+
+        self.assertTrue(
+            asyncio.run(
+                _would_append_to_protected_genelab_source(
+                    env,
+                    PROTECTED_SUBMISSION_MAIN_ANALYSIS,
                 )
             )
         )

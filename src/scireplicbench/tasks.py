@@ -247,6 +247,7 @@ def _starter_block(record: dict[str, Any]) -> str:
         - For GeneLab, these files already implement a runnable reviewer-path baseline, so preserve the fold discovery and structured outputs unless you have a better benchmark-consistent replacement.
         - Keep the seeded `/workspace/submission/run.sh` launcher intact and put substantive edits in Python source files under `/workspace/submission` instead of rewriting the launcher from scratch.
         - The seeded launcher includes required artifact checks, a primary-script timeout, and fallback to the pristine staged starter; preserve those guardrails if you inspect or lightly edit `run.sh`.
+        - For GeneLab, run `bash /workspace/submission/run.sh` as the canonical saved workflow before submitting; do not bypass the seeded launcher with an alternate driver that skips its artifact checks and fallback.
         - The benchmark tools may reject attempts to overwrite the seeded GeneLab `run.sh`; edit `/workspace/submission/main_analysis.py` or add helper source files instead.
         - Do not replace the runnable GeneLab baseline with a shorter placeholder or file-enumeration stub; if you edit it, preserve the required output writers and the saved launcher workflow.
         {seeded_submission_note}

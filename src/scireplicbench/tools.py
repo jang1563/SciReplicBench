@@ -204,31 +204,51 @@ async def _would_downgrade_protected_genelab_source(
 ) -> bool:
     if not _is_protected_genelab_source_path(path):
         return False
-    if not await _starter_main_analysis_is_available(env):
-        return False
+    starter_source: str | None = None
     try:
-        existing = await env.read_file(path)  # type: ignore[attr-defined]
+        starter_source = str(
+            await env.read_file(PROTECTED_STARTER_MAIN_ANALYSIS)  # type: ignore[attr-defined]
+        )
     except FileNotFoundError:
-        return False
+        starter_source = None
     except Exception:
-        return False
-    return _looks_like_rich_genelab_source(
-        str(existing)
-    ) and not _looks_like_rich_genelab_source(replacement)
+        starter_source = None
+    try:
+        existing = str(await env.read_file(path))  # type: ignore[attr-defined]
+    except FileNotFoundError:
+        existing = ""
+    except Exception:
+        existing = ""
+
+    baseline_candidates = [
+        candidate for candidate in (existing, starter_source) if candidate
+    ]
+    has_rich_baseline = any(
+        _looks_like_rich_genelab_source(candidate)
+        for candidate in baseline_candidates
+    )
+    return has_rich_baseline and not _looks_like_rich_genelab_source(replacement)
 
 
 async def _would_append_to_protected_genelab_source(env: object, path: str) -> bool:
     if not _is_protected_genelab_source_path(path):
         return False
-    if not await _starter_main_analysis_is_available(env):
-        return False
+    baseline_candidates: list[str] = []
     try:
-        existing = await env.read_file(path)  # type: ignore[attr-defined]
+        baseline_candidates.append(str(await env.read_file(path)))  # type: ignore[attr-defined]
     except FileNotFoundError:
-        return False
+        pass
     except Exception:
-        return False
-    return _looks_like_rich_genelab_source(str(existing))
+        pass
+    try:
+        baseline_candidates.append(
+            str(await env.read_file(PROTECTED_STARTER_MAIN_ANALYSIS))  # type: ignore[attr-defined]
+        )
+    except FileNotFoundError:
+        pass
+    except Exception:
+        pass
+    return any(_looks_like_rich_genelab_source(candidate) for candidate in baseline_candidates)
 
 
 def _bash_command_writes_protected_launcher(cmd: str) -> bool:
