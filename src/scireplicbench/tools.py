@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import re
+import json
 import posixpath
+import re
 from pathlib import PurePosixPath
 from typing import Literal
 
@@ -45,6 +46,7 @@ PROTECTED_STARTER_LAUNCHER = "/workspace/input/paper_bundle/starter/run.sh"
 PROTECTED_SUBMISSION_LAUNCHER = "/workspace/submission/run.sh"
 PROTECTED_STARTER_MAIN_ANALYSIS = "/workspace/input/paper_bundle/starter/main_analysis.py"
 PROTECTED_SUBMISSION_MAIN_ANALYSIS = "/workspace/submission/main_analysis.py"
+PROTECTED_SUBMISSION_MANIFEST = "/workspace/output/submission_manifest.json"
 PROTECTED_GENELAB_OUTPUTS = (
     "/workspace/output/agent/lomo/summary.tsv",
     "/workspace/output/agent/transfer/cross_tissue.tsv",
@@ -71,6 +73,13 @@ PROTECTED_GENELAB_SOURCE_MESSAGE = (
     "interpretability, go/no-go, foundation-model staging, and manifest outputs. "
     "Use workspace_text_file for a complete replacement that preserves those "
     "benchmark stages."
+)
+PROTECTED_GENELAB_MANIFEST_MESSAGE = (
+    "GeneLab manifest protection: /workspace/output/submission_manifest.json "
+    "already records the seeded reviewer-path run with commands, inputs, "
+    "artifacts, detected tissues, folds, models, and summary counts. Do not "
+    "replace it with a thinner prose summary; rerun /workspace/submission/run.sh "
+    "or preserve the full structured manifest fields."
 )
 _GENELAB_SOURCE_REQUIRED_OUTPUT_MARKERS = (
     "lomo/summary.tsv",
@@ -117,6 +126,16 @@ _PROTECTED_SOURCE_MUTATION_RE = re.compile(
     r"[^\n;&|]*"
     + re.escape(PROTECTED_SUBMISSION_MAIN_ANALYSIS)
 )
+_PROTECTED_MANIFEST_WRITE_RE = re.compile(
+    r"(?:^|[^<])>{1,2}\s*(?:--\s*)?['\"]?"
+    + re.escape(PROTECTED_SUBMISSION_MANIFEST)
+    + r"(?:['\"]?)(?:\s|$)"
+)
+_PROTECTED_MANIFEST_MUTATION_RE = re.compile(
+    r"\b(?:tee|cp|mv|rm|unlink|truncate|install|sed|perl|python|python3)\b"
+    r"[^\n;&|]*"
+    + re.escape(PROTECTED_SUBMISSION_MANIFEST)
+)
 _STARTER_MAIN_ANALYSIS_COPY_RE = re.compile(
     r"^\s*cp(?:\s+-[^\s]+)*\s+['\"]?"
     + re.escape(PROTECTED_STARTER_MAIN_ANALYSIS)
@@ -158,6 +177,10 @@ def _is_protected_genelab_output_path(path: str) -> bool:
     return path in PROTECTED_GENELAB_OUTPUTS
 
 
+def _is_protected_genelab_manifest_path(path: str) -> bool:
+    return path == PROTECTED_SUBMISSION_MANIFEST
+
+
 def _looks_like_rich_genelab_tsv(contents: str) -> bool:
     rows = [line for line in str(contents).splitlines() if line.strip()]
     if len(rows) < 5:
@@ -175,6 +198,58 @@ def _looks_like_rich_genelab_source(contents: str) -> bool:
         return False
     marker_hits = sum(1 for marker in _GENELAB_SOURCE_RICH_MARKERS if marker in text)
     return marker_hits >= 7
+
+
+def _looks_like_rich_genelab_manifest(contents: str) -> bool:
+    try:
+        payload = json.loads(str(contents))
+    except (TypeError, json.JSONDecodeError):
+        return False
+
+    if not isinstance(payload, dict):
+        return False
+    if payload.get("paper_id") != "genelab_benchmark":
+        return False
+
+    commands = payload.get("commands")
+    inputs = payload.get("inputs")
+    artifacts = payload.get("artifacts")
+    detected_tissues = payload.get("detected_tissues")
+    models_run = payload.get("models_run")
+    summary = payload.get("summary")
+    if not (
+        isinstance(commands, list)
+        and isinstance(inputs, dict)
+        and isinstance(artifacts, list)
+        and isinstance(detected_tissues, list)
+        and isinstance(models_run, list)
+        and isinstance(summary, dict)
+    ):
+        return False
+    if not any("run.sh" in str(command) for command in commands):
+        return False
+    if len(detected_tissues) < 3 or len(models_run) < 3:
+        return False
+    if int(payload.get("n_folds") or 0) < 3:
+        return False
+
+    artifact_text = "\n".join(str(artifact) for artifact in artifacts)
+    required_artifacts = (
+        "/workspace/output/agent/lomo/summary.tsv",
+        "/workspace/output/agent/transfer/cross_tissue.tsv",
+        "/workspace/output/agent/negative_controls/summary.tsv",
+        "/workspace/output/agent/interpretability/top_features.tsv",
+    )
+    if not all(artifact in artifact_text for artifact in required_artifacts):
+        return False
+
+    required_summary_keys = (
+        "successful_lomo_rows",
+        "successful_transfer_rows",
+        "successful_negative_control_rows",
+        "interpretability_rows",
+    )
+    return all(key in summary for key in required_summary_keys)
 
 
 async def _would_downgrade_protected_genelab_output(
@@ -230,6 +305,37 @@ async def _would_downgrade_protected_genelab_source(
     return has_rich_baseline and not _looks_like_rich_genelab_source(replacement)
 
 
+async def _would_downgrade_protected_genelab_manifest(
+    env: object,
+    path: str,
+    replacement: str,
+) -> bool:
+    if not _is_protected_genelab_manifest_path(path):
+        return False
+    if not await _starter_launcher_is_available(env):
+        return False
+    try:
+        existing = await env.read_file(path)  # type: ignore[attr-defined]
+    except FileNotFoundError:
+        return False
+    except Exception:
+        return False
+    return (
+        _looks_like_rich_genelab_manifest(str(existing))
+        and not _looks_like_rich_genelab_manifest(replacement)
+    )
+
+
+async def _protected_genelab_manifest_is_rich(env: object) -> bool:
+    try:
+        existing = await env.read_file(PROTECTED_SUBMISSION_MANIFEST)  # type: ignore[attr-defined]
+    except FileNotFoundError:
+        return False
+    except Exception:
+        return False
+    return _looks_like_rich_genelab_manifest(str(existing))
+
+
 async def _would_append_to_protected_genelab_source(env: object, path: str) -> bool:
     if not _is_protected_genelab_source_path(path):
         return False
@@ -274,6 +380,16 @@ def _bash_command_writes_protected_source(cmd: str) -> bool:
         if _PROTECTED_SOURCE_WRITE_RE.search(segment) or _PROTECTED_SOURCE_MUTATION_RE.search(segment):
             return True
     return False
+
+
+def _bash_command_writes_protected_manifest(cmd: str) -> bool:
+    if PROTECTED_SUBMISSION_MANIFEST not in cmd:
+        return False
+    compact = cmd.replace("\\\n", " ")
+    return bool(
+        _PROTECTED_MANIFEST_WRITE_RE.search(compact)
+        or _PROTECTED_MANIFEST_MUTATION_RE.search(compact)
+    )
 
 
 def _normalize_scratchpad(existing: str, action: str, content: str) -> str:
@@ -370,6 +486,11 @@ def guarded_bash(
             return f"bash error: {PROTECTED_LAUNCHER_MESSAGE}"
         if _bash_command_writes_protected_source(cmd) and await _starter_main_analysis_is_available(env):
             return f"bash error: {PROTECTED_GENELAB_SOURCE_MESSAGE}"
+        if (
+            _bash_command_writes_protected_manifest(cmd)
+            and await _protected_genelab_manifest_is_rich(env)
+        ):
+            return f"bash error: {PROTECTED_GENELAB_MANIFEST_MESSAGE}"
 
         result = await env.exec(
             cmd=["bash", "--login", "-c", cmd], timeout=timeout, user=user
@@ -505,6 +626,9 @@ def workspace_text_file():
         if await _would_downgrade_protected_genelab_source(env, resolved, replacement):
             return f"workspace_text_file error: {PROTECTED_GENELAB_SOURCE_MESSAGE}"
 
+        if await _would_downgrade_protected_genelab_manifest(env, resolved, replacement):
+            return f"workspace_text_file error: {PROTECTED_GENELAB_MANIFEST_MESSAGE}"
+
         if await _would_downgrade_protected_genelab_output(env, resolved, replacement):
             return f"workspace_text_file error: {PROTECTED_GENELAB_OUTPUT_MESSAGE}"
 
@@ -545,18 +669,24 @@ def workspace_text_file():
 __all__ = [
     "DEFAULT_SCRATCHPAD_PATH",
     "PROTECTED_GENELAB_OUTPUTS",
+    "PROTECTED_GENELAB_MANIFEST_MESSAGE",
     "PROTECTED_GENELAB_SOURCE_MESSAGE",
     "PROTECTED_STARTER_LAUNCHER",
     "PROTECTED_STARTER_MAIN_ANALYSIS",
     "PROTECTED_SUBMISSION_LAUNCHER",
     "PROTECTED_SUBMISSION_MAIN_ANALYSIS",
+    "PROTECTED_SUBMISSION_MANIFEST",
     "WORKSPACE_TEXT_ALLOWED_ROOTS",
+    "_bash_command_writes_protected_manifest",
     "_bash_command_writes_protected_source",
     "_is_protected_genelab_output_path",
+    "_is_protected_genelab_manifest_path",
     "_is_protected_genelab_source_path",
+    "_looks_like_rich_genelab_manifest",
     "_looks_like_rich_genelab_source",
     "_looks_like_rich_genelab_tsv",
     "_would_append_to_protected_genelab_source",
+    "_would_downgrade_protected_genelab_manifest",
     "_would_downgrade_protected_genelab_source",
     "guarded_bash",
     "workspace_text_file",

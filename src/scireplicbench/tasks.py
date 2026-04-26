@@ -250,6 +250,9 @@ def _starter_block(record: dict[str, Any]) -> str:
         - For GeneLab, run `bash /workspace/submission/run.sh` as the canonical saved workflow before submitting; do not bypass the seeded launcher with an alternate driver that skips its artifact checks and fallback.
         - The benchmark tools may reject attempts to overwrite the seeded GeneLab `run.sh`; edit `/workspace/submission/main_analysis.py` or add helper source files instead.
         - Do not replace the runnable GeneLab baseline with a shorter placeholder or file-enumeration stub; if you edit it, preserve the required output writers and the saved launcher workflow.
+        - After the canonical GeneLab launcher succeeds, inspect the concrete generated artifacts (`lomo/summary.tsv`, `lomo/split_manifest.tsv`, `lomo/preprocessed_features.tsv`, `transfer/cross_tissue.tsv`, `negative_controls/summary.tsv`, `interpretability/top_features.tsv`, `go_nogo/summary.tsv`, `foundation/geneformer_staging.tsv`) and cite their headers or representative rows in your final response.
+        - Do not add an alternate GeneLab driver such as `run_benchmark.py` or `evaluate_models.py` after the seeded launcher has already produced the required artifacts, unless you also wire it into the saved workflow and verify it improves the full artifact set.
+        - The GeneLab starter writes `/workspace/output/submission_manifest.json`; once that structured manifest exists, leave it intact unless you preserve its commands, inputs, artifact list, detected tissues, folds, models, and summary counts.
         {seeded_submission_note}
         """
     )

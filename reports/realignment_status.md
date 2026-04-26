@@ -19,19 +19,19 @@ This note records the repo-local realignment work added after the baseline v1.2 
 
 ## Latest GeneLab Pilot
 
-The April 25, 2026 v20 `genelab_benchmark` pilot ran successfully after the judge prompt/parser was hardened for zero-score responses with no valid supporting evidence. v20 reran the same patched state with `message_limit=100` after v19 hit the original 60-message cap.
+The April 25, 2026 v21 `genelab_benchmark` pilot validated the first starter-preservation patch: the agent copied the seeded starter, then ran `bash /workspace/submission/run.sh` as the canonical workflow. The run still regressed because, after the starter succeeded, the agent attempted optional sidecar work (`evaluate_models.py`) and rewrote a short `/workspace/output/submission_manifest.json`, which weakened the final evidence trail even though the protected `main_analysis.py` and `run.sh` edits were rejected.
 
-- Log: `logs/2026-04-25T16-40-28-00-00_scireplicbench_5zsyi5gh9Bp7B79VPEdEbF.eval`
-- Trace: `logs-prod/inspect-trace-genelab-pilot-v20.log.gz`
-- Score: `0.15855`
-- Category scores: `code_development=0.253`, `execution=0.28`, `result_match=0.0`
-- Passed leaves: `9 / 55`
+- Log: `logs/2026-04-26T01-46-20-00-00_scireplicbench_hbpprfCRQig8ZSSPhMkiFW.eval`
+- Trace: `logs-prod/inspect-trace-genelab-pilot-v21.log.gz`
+- Score: `0.08888333333333333`
+- Category scores: `code_development=0.20633333333333334`, `execution=0.06666666666666667`, `result_match=0.0`
+- Passed leaves: `5 / 55`
 - Judge failures: `1`
-- Zero-score `no_valid_evidence` responses: `40`
+- Zero-score `no_valid_evidence` responses: `42`
 - Sample limit: none
-- Precheck: `ok=true`, `nontrivial_py_files=4`, `output_artifact_count=9`
+- Precheck: `ok=true`, `nontrivial_py_files=2`, `output_artifact_count=9`
 
-Compared with v18, v20 reduced judge failures from `10` to `1`, confirming that the `no_valid_evidence` fallback removes most empty-quote validation failures. The remaining score drop from v18 (`0.22688333333333333`) and v17 (`0.31771666666666665`) is now attributable to agent-output quality rather than sample truncation: v20 recovered `load_feature_matrices`, `bootstrap_ci_written`, and `go_nogo_summary_written`, but lost several execution leaves such as `data_load_executes`, `classical_models_execute`, `preprocessed_matrix_written`, and `cross_mission_matrix_written`. The next local lever is to harden the GeneLab starter/fallback so it consistently executes the packaged workflow and writes the execution-side TSV artifacts before the agent begins optional extensions.
+Compared with v20 (`0.15855`), v21 gained `fit_random_forest` and `compare_foundation_to_classical`, but lost six execution/code leaves including `load_feature_matrices`, `bootstrap_ci_written`, `go_nogo_summary_written`, and `geneformer_stage_executes`. The follow-up patch now protects rich GeneLab starter manifests from thin overwrites and strengthens the GeneLab prompt: after the canonical launcher succeeds, agents should inspect the concrete TSV artifacts and avoid alternate drivers unless they are wired into the saved workflow and verified against the full artifact set.
 
 ## Remaining Human/Data Inputs
 

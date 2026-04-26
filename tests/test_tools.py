@@ -6,22 +6,28 @@ from pathlib import Path
 
 from scireplicbench.tools import (
     PROTECTED_GENELAB_OUTPUTS,
+    PROTECTED_GENELAB_MANIFEST_MESSAGE,
     PROTECTED_GENELAB_OUTPUT_MESSAGE,
     PROTECTED_GENELAB_SOURCE_MESSAGE,
     PROTECTED_STARTER_LAUNCHER,
     PROTECTED_STARTER_MAIN_ANALYSIS,
     PROTECTED_SUBMISSION_LAUNCHER,
     PROTECTED_SUBMISSION_MAIN_ANALYSIS,
+    PROTECTED_SUBMISSION_MANIFEST,
+    _bash_command_writes_protected_manifest,
     _bash_command_writes_protected_source,
     _bash_command_writes_protected_launcher,
     _is_protected_genelab_output_path,
+    _is_protected_genelab_manifest_path,
     _is_protected_genelab_source_path,
     _is_protected_launcher_path,
+    _looks_like_rich_genelab_manifest,
     _looks_like_rich_genelab_source,
     _looks_like_rich_genelab_tsv,
     _normalize_workspace_text_path,
     _truncate_workspace_text,
     _would_append_to_protected_genelab_source,
+    _would_downgrade_protected_genelab_manifest,
     _would_downgrade_protected_genelab_output,
     _would_downgrade_protected_genelab_source,
 )
@@ -176,6 +182,107 @@ class ProtectedGeneLabOutputTest(unittest.TestCase):
             )
         )
         self.assertIn("rich benchmark-style table", PROTECTED_GENELAB_OUTPUT_MESSAGE)
+
+
+class ProtectedGeneLabManifestTest(unittest.TestCase):
+    def _rich_manifest(self) -> str:
+        return """{
+  "paper_id": "genelab_benchmark",
+  "starter_profile": "reviewer_path_baseline",
+  "detected_tissues": [
+    "A2_gastrocnemius_lomo",
+    "A4_thymus_lomo",
+    "A5_skin_lomo",
+    "A6_eye_lomo"
+  ],
+  "n_folds": 12,
+  "models_run": ["ElasticNetLogReg", "RandomForest", "XGBoost", "PCALogReg"],
+  "commands": ["bash /workspace/submission/run.sh"],
+  "inputs": {
+    "feature_root": "/workspace/input/paper_bundle/data/huggingface_dataset",
+    "label_root": "/workspace/input/paper_bundle/data/raw/GeneLab_benchmark/tasks"
+  },
+  "artifacts": [
+    "/workspace/output/agent/lomo/summary.tsv",
+    "/workspace/output/agent/transfer/cross_tissue.tsv",
+    "/workspace/output/agent/negative_controls/summary.tsv",
+    "/workspace/output/agent/interpretability/top_features.tsv"
+  ],
+  "summary": {
+    "successful_lomo_rows": 48,
+    "successful_transfer_rows": 64,
+    "successful_negative_control_rows": 24,
+    "interpretability_rows": 96
+  }
+}"""
+
+    def test_protected_genelab_manifest_path_is_recognized(self) -> None:
+        self.assertTrue(_is_protected_genelab_manifest_path(PROTECTED_SUBMISSION_MANIFEST))
+        self.assertFalse(
+            _is_protected_genelab_manifest_path("/workspace/output/agent/lomo/summary.tsv")
+        )
+
+    def test_rich_genelab_manifest_detection_requires_starter_shape(self) -> None:
+        shallow = """{
+  "paper_id": "genelab_benchmark",
+  "outputs": ["/workspace/output/agent/lomo/summary.tsv"]
+}"""
+
+        self.assertTrue(_looks_like_rich_genelab_manifest(self._rich_manifest()))
+        self.assertFalse(_looks_like_rich_genelab_manifest(shallow))
+        self.assertFalse(_looks_like_rich_genelab_manifest("not json"))
+
+    def test_manifest_downgrade_guard_blocks_thin_replacement(self) -> None:
+        class FakeEnv:
+            def __init__(self, files: dict[str, str]) -> None:
+                self.files = files
+
+            async def read_file(self, path: str) -> str:
+                if path not in self.files:
+                    raise FileNotFoundError(path)
+                return self.files[path]
+
+        shallow_replacement = """{
+  "paper_id": "genelab_benchmark",
+  "outputs": ["/workspace/output/agent/lomo/summary.tsv"]
+}"""
+        env = FakeEnv(
+            {
+                PROTECTED_STARTER_LAUNCHER: "#!/usr/bin/env bash\n",
+                PROTECTED_SUBMISSION_MANIFEST: self._rich_manifest(),
+            }
+        )
+
+        self.assertTrue(
+            asyncio.run(
+                _would_downgrade_protected_genelab_manifest(
+                    env,
+                    PROTECTED_SUBMISSION_MANIFEST,
+                    shallow_replacement,
+                )
+            )
+        )
+        self.assertFalse(
+            asyncio.run(
+                _would_downgrade_protected_genelab_manifest(
+                    env,
+                    PROTECTED_SUBMISSION_MANIFEST,
+                    self._rich_manifest(),
+                )
+            )
+        )
+        self.assertIn("full structured manifest", PROTECTED_GENELAB_MANIFEST_MESSAGE)
+
+    def test_bash_guard_detects_common_manifest_overwrites(self) -> None:
+        blocked_commands = [
+            "cat <<'JSON' > /workspace/output/submission_manifest.json\n{}\nJSON",
+            "printf '{}\\n' >> /workspace/output/submission_manifest.json",
+            "tee /workspace/output/submission_manifest.json >/dev/null",
+            "python3 -c 'open(\"/workspace/output/submission_manifest.json\", \"w\").write(\"{}\")'",
+        ]
+        for cmd in blocked_commands:
+            with self.subTest(cmd=cmd):
+                self.assertTrue(_bash_command_writes_protected_manifest(cmd))
 
 
 class ProtectedGeneLabSourceTest(unittest.TestCase):
