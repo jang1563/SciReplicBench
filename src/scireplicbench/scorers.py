@@ -40,6 +40,24 @@ _SUBMISSION_CONTEXT_PRIORITY_PATHS = (
     "/workspace/submission/run.sh",
     "/workspace/submission/README.md",
 )
+_GENELAB_CONTEXT_ANCHOR_PATHS = (
+    "/workspace/output/agent/lomo/summary.tsv",
+    "/workspace/output/submission_manifest.json",
+    "/workspace/submission/main_analysis.py",
+)
+_GENELAB_CANONICAL_SOURCE_PATHS = {
+    "/workspace/submission/main_analysis.py",
+    "/workspace/submission/genelab_scaffold.py",
+}
+_GENELAB_UNHOOKED_SIDECAR_NAMES = {
+    "run_benchmark.py",
+    "evaluate_models.py",
+    "model_analysis.py",
+    "model_evaluation.py",
+    "evaluate_lomo.py",
+    "evaluation_helpers.py",
+    "gene_lab_helpers.py",
+}
 _SOURCE_FOCUS_PATTERNS = (
     "FEATURE_ROOT",
     "LABEL_ROOT",
@@ -674,6 +692,16 @@ def _is_submission_python_source(path: str) -> bool:
     return path.startswith("/workspace/submission/") and Path(path).suffix.lower() == ".py"
 
 
+def _skip_unhooked_genelab_sidecar_contents(path: str, file_paths: set[str]) -> bool:
+    if path in _GENELAB_CANONICAL_SOURCE_PATHS:
+        return False
+    if not _is_submission_python_source(path):
+        return False
+    if Path(path).name not in _GENELAB_UNHOOKED_SIDECAR_NAMES:
+        return False
+    return all(anchor in file_paths for anchor in _GENELAB_CONTEXT_ANCHOR_PATHS)
+
+
 def _focused_source_excerpt(contents: str, *, max_chars: int) -> str:
     """Return actual source lines sampled across implementation-relevant regions."""
 
@@ -941,12 +969,15 @@ async def _collect_submission_context(
     if not file_list:
         return "(no submission artifacts were produced in /workspace/submission or /workspace/output)"
 
+    file_paths = {path.strip() for path in file_list.splitlines() if path.strip()}
     chunks.append("Submission file list:\n" + file_list)
     total = len(chunks[0])
 
     for path in file_list.splitlines():
         path = path.strip()
         if not path:
+            continue
+        if _skip_unhooked_genelab_sidecar_contents(path, file_paths):
             continue
         if _skip_reality_file_contents(path):
             continue

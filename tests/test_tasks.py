@@ -56,6 +56,7 @@ class TaskConfigTest(unittest.TestCase):
         self.assertIn("Do not replace the runnable GeneLab baseline", prompt)
         self.assertIn("inspect the concrete generated artifacts", prompt)
         self.assertIn("Do not add an alternate GeneLab driver", prompt)
+        self.assertIn("may reject unhooked post-success sidecars", prompt)
         self.assertIn("once that structured manifest exists, leave it intact", prompt)
 
     def test_paper_bundle_file_map_excludes_irrelevant_genelab_artifacts(self) -> None:

@@ -14,6 +14,7 @@ from scireplicbench.scorers import (
     _judge_leaf,
     _matching_evidence_sources,
     _reality_context_for_leaf,
+    _skip_unhooked_genelab_sidecar_contents,
     leaf_score_map_from_judgements,
     score_rubric_payload,
     summarize_score_report,
@@ -174,6 +175,75 @@ class ScorerTest(unittest.TestCase):
         self.assertIn("/workspace/output/submission_manifest.json", reality)
         self.assertNotIn("--- /workspace/output/submission_manifest.json ---", reality)
         self.assertNotIn("missing train/test label files", reality)
+
+    def test_collect_submission_context_skips_known_unhooked_genelab_sidecar_contents(self) -> None:
+        listing = "\n".join(
+            [
+                "/workspace/output/agent/lomo/summary.tsv",
+                "/workspace/output/submission_manifest.json",
+                "/workspace/submission/main_analysis.py",
+                "/workspace/submission/model_analysis.py",
+            ]
+        )
+        fake = _FakeContextSandbox(
+            listing=listing,
+            files={
+                "/workspace/output/agent/lomo/summary.tsv": "model\tauroc\nXGBoost\t0.82\n",
+                "/workspace/output/submission_manifest.json": '{"paper_id": "genelab_benchmark"}\n',
+                "/workspace/submission/main_analysis.py": (
+                    "def _xgboost_scores():\n"
+                    "    return 'canonical starter source'\n"
+                ),
+                "/workspace/submission/model_analysis.py": "SHALLOW_SIDE_CAR = True\n",
+            },
+        )
+
+        with patch(
+            "scireplicbench.scorers.sandbox",
+            new=MagicMock(return_value=fake),
+            create=True,
+        ):
+            reality = asyncio.run(
+                _collect_submission_context(max_chars=1200, per_file_chars=200)
+            )
+
+        self.assertIn("/workspace/submission/model_analysis.py", reality)
+        self.assertNotIn("--- /workspace/submission/model_analysis.py ---", reality)
+        self.assertNotIn("SHALLOW_SIDE_CAR", reality)
+        self.assertIn("canonical starter source", reality)
+
+    def test_skip_unhooked_genelab_sidecar_requires_canonical_anchors(self) -> None:
+        anchors = {
+            "/workspace/output/agent/lomo/summary.tsv",
+            "/workspace/output/submission_manifest.json",
+            "/workspace/submission/main_analysis.py",
+            "/workspace/submission/model_analysis.py",
+        }
+
+        self.assertTrue(
+            _skip_unhooked_genelab_sidecar_contents(
+                "/workspace/submission/model_analysis.py",
+                anchors,
+            )
+        )
+        self.assertFalse(
+            _skip_unhooked_genelab_sidecar_contents(
+                "/workspace/submission/main_analysis.py",
+                anchors,
+            )
+        )
+        self.assertFalse(
+            _skip_unhooked_genelab_sidecar_contents(
+                "/workspace/submission/helper.py",
+                anchors,
+            )
+        )
+        self.assertFalse(
+            _skip_unhooked_genelab_sidecar_contents(
+                "/workspace/submission/model_analysis.py",
+                {"/workspace/submission/model_analysis.py"},
+            )
+        )
 
     def test_focused_source_excerpt_keeps_late_implementation_regions(self) -> None:
         source = "\n".join(

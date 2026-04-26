@@ -46,6 +46,7 @@ PROTECTED_STARTER_LAUNCHER = "/workspace/input/paper_bundle/starter/run.sh"
 PROTECTED_SUBMISSION_LAUNCHER = "/workspace/submission/run.sh"
 PROTECTED_STARTER_MAIN_ANALYSIS = "/workspace/input/paper_bundle/starter/main_analysis.py"
 PROTECTED_SUBMISSION_MAIN_ANALYSIS = "/workspace/submission/main_analysis.py"
+PROTECTED_SUBMISSION_SCAFFOLD = "/workspace/submission/genelab_scaffold.py"
 PROTECTED_SUBMISSION_MANIFEST = "/workspace/output/submission_manifest.json"
 PROTECTED_GENELAB_OUTPUTS = (
     "/workspace/output/agent/lomo/summary.tsv",
@@ -80,6 +81,22 @@ PROTECTED_GENELAB_MANIFEST_MESSAGE = (
     "artifacts, detected tissues, folds, models, and summary counts. Do not "
     "replace it with a thinner prose summary; rerun /workspace/submission/run.sh "
     "or preserve the full structured manifest fields."
+)
+PROTECTED_GENELAB_SIDECAR_MESSAGE = (
+    "GeneLab post-success sidecar protection: the canonical seeded workflow "
+    "already produced the structured starter artifacts and manifest. Do not "
+    "add an unhooked alternate analysis driver under /workspace/submission; "
+    "inspect the generated TSVs and submit, or make a complete canonical "
+    "workflow replacement that preserves the full artifact set."
+)
+_GENELAB_POST_SUCCESS_SIDECAR_NAMES = (
+    "run_benchmark.py",
+    "evaluate_models.py",
+    "model_analysis.py",
+    "model_evaluation.py",
+    "evaluate_lomo.py",
+    "evaluation_helpers.py",
+    "gene_lab_helpers.py",
 )
 _GENELAB_SOURCE_REQUIRED_OUTPUT_MARKERS = (
     "lomo/summary.tsv",
@@ -136,6 +153,9 @@ _PROTECTED_MANIFEST_MUTATION_RE = re.compile(
     r"[^\n;&|]*"
     + re.escape(PROTECTED_SUBMISSION_MANIFEST)
 )
+_SUBMISSION_PYTHON_PATH_RE = re.compile(
+    r"['\"]?(?P<path>/workspace/submission/[A-Za-z0-9_./-]+\.py)['\"]?"
+)
 _STARTER_MAIN_ANALYSIS_COPY_RE = re.compile(
     r"^\s*cp(?:\s+-[^\s]+)*\s+['\"]?"
     + re.escape(PROTECTED_STARTER_MAIN_ANALYSIS)
@@ -179,6 +199,18 @@ def _is_protected_genelab_output_path(path: str) -> bool:
 
 def _is_protected_genelab_manifest_path(path: str) -> bool:
     return path == PROTECTED_SUBMISSION_MANIFEST
+
+
+def _is_submission_python_path(path: str) -> bool:
+    return path.startswith("/workspace/submission/") and PurePosixPath(path).suffix == ".py"
+
+
+def _is_protected_genelab_sidecar_path(path: str) -> bool:
+    if not _is_submission_python_path(path):
+        return False
+    if path in (PROTECTED_SUBMISSION_MAIN_ANALYSIS, PROTECTED_SUBMISSION_SCAFFOLD):
+        return False
+    return PurePosixPath(path).name in _GENELAB_POST_SUCCESS_SIDECAR_NAMES
 
 
 def _looks_like_rich_genelab_tsv(contents: str) -> bool:
@@ -250,6 +282,42 @@ def _looks_like_rich_genelab_manifest(contents: str) -> bool:
         "interpretability_rows",
     )
     return all(key in summary for key in required_summary_keys)
+
+
+def _looks_like_genelab_alternate_sidecar_source(contents: str) -> bool:
+    text = str(contents)
+    marker_hits = sum(
+        1
+        for marker in (
+            "GENELAB_FEATURE_ROOT",
+            "GENELAB_LABEL_ROOT",
+            "FEATURE_ROOT",
+            "LABEL_ROOT",
+            "OUTPUT_ROOT",
+            "LOMO_FIELDS",
+            "TRANSFER_FIELDS",
+            "discover_fold_specs",
+            "load_aligned_fold",
+            "LogisticRegression",
+            "RandomForestClassifier",
+            "XGBClassifier",
+            "roc_auc_score",
+        )
+        if marker in text
+    )
+    output_hits = sum(
+        1
+        for marker in (
+            "/workspace/output/agent",
+            "lomo/summary.tsv",
+            "transfer/cross_tissue.tsv",
+            "negative_controls/summary.tsv",
+            "interpretability/top_features.tsv",
+            "submission_manifest.json",
+        )
+        if marker in text
+    )
+    return marker_hits >= 4 and output_hits >= 1
 
 
 async def _would_downgrade_protected_genelab_output(
@@ -336,6 +404,22 @@ async def _protected_genelab_manifest_is_rich(env: object) -> bool:
     return _looks_like_rich_genelab_manifest(str(existing))
 
 
+async def _would_create_protected_genelab_sidecar(
+    env: object,
+    path: str,
+    replacement: str,
+) -> bool:
+    if not _is_submission_python_path(path):
+        return False
+    if path in (PROTECTED_SUBMISSION_MAIN_ANALYSIS, PROTECTED_SUBMISSION_SCAFFOLD):
+        return False
+    if not await _protected_genelab_manifest_is_rich(env):
+        return False
+    return _is_protected_genelab_sidecar_path(
+        path
+    ) or _looks_like_genelab_alternate_sidecar_source(replacement)
+
+
 async def _would_append_to_protected_genelab_source(env: object, path: str) -> bool:
     if not _is_protected_genelab_source_path(path):
         return False
@@ -390,6 +474,27 @@ def _bash_command_writes_protected_manifest(cmd: str) -> bool:
         _PROTECTED_MANIFEST_WRITE_RE.search(compact)
         or _PROTECTED_MANIFEST_MUTATION_RE.search(compact)
     )
+
+
+def _bash_command_writes_or_runs_protected_sidecar(cmd: str) -> bool:
+    compact = cmd.replace("\\\n", " ")
+    for match in _SUBMISSION_PYTHON_PATH_RE.finditer(compact):
+        path = match.group("path").strip("'\"")
+        if not _is_protected_genelab_sidecar_path(path):
+            continue
+        quoted_path = re.escape(path)
+        if re.search(r"\bpython(?:3)?\b[^\n;&|]*" + quoted_path, compact):
+            return True
+        if re.search(r"(?:^|[^<])>{1,2}\s*(?:--\s*)?['\"]?" + quoted_path, compact):
+            return True
+        if re.search(
+            r"\b(?:tee|cp|mv|rm|unlink|truncate|install|sed|perl)\b"
+            r"[^\n;&|]*"
+            + quoted_path,
+            compact,
+        ):
+            return True
+    return False
 
 
 def _normalize_scratchpad(existing: str, action: str, content: str) -> str:
@@ -491,6 +596,11 @@ def guarded_bash(
             and await _protected_genelab_manifest_is_rich(env)
         ):
             return f"bash error: {PROTECTED_GENELAB_MANIFEST_MESSAGE}"
+        if (
+            _bash_command_writes_or_runs_protected_sidecar(cmd)
+            and await _protected_genelab_manifest_is_rich(env)
+        ):
+            return f"bash error: {PROTECTED_GENELAB_SIDECAR_MESSAGE}"
 
         result = await env.exec(
             cmd=["bash", "--login", "-c", cmd], timeout=timeout, user=user
@@ -629,6 +739,9 @@ def workspace_text_file():
         if await _would_downgrade_protected_genelab_manifest(env, resolved, replacement):
             return f"workspace_text_file error: {PROTECTED_GENELAB_MANIFEST_MESSAGE}"
 
+        if await _would_create_protected_genelab_sidecar(env, resolved, replacement):
+            return f"workspace_text_file error: {PROTECTED_GENELAB_SIDECAR_MESSAGE}"
+
         if await _would_downgrade_protected_genelab_output(env, resolved, replacement):
             return f"workspace_text_file error: {PROTECTED_GENELAB_OUTPUT_MESSAGE}"
 
@@ -670,22 +783,28 @@ __all__ = [
     "DEFAULT_SCRATCHPAD_PATH",
     "PROTECTED_GENELAB_OUTPUTS",
     "PROTECTED_GENELAB_MANIFEST_MESSAGE",
+    "PROTECTED_GENELAB_SIDECAR_MESSAGE",
     "PROTECTED_GENELAB_SOURCE_MESSAGE",
     "PROTECTED_STARTER_LAUNCHER",
     "PROTECTED_STARTER_MAIN_ANALYSIS",
     "PROTECTED_SUBMISSION_LAUNCHER",
     "PROTECTED_SUBMISSION_MAIN_ANALYSIS",
     "PROTECTED_SUBMISSION_MANIFEST",
+    "PROTECTED_SUBMISSION_SCAFFOLD",
     "WORKSPACE_TEXT_ALLOWED_ROOTS",
     "_bash_command_writes_protected_manifest",
     "_bash_command_writes_protected_source",
+    "_bash_command_writes_or_runs_protected_sidecar",
     "_is_protected_genelab_output_path",
     "_is_protected_genelab_manifest_path",
+    "_is_protected_genelab_sidecar_path",
     "_is_protected_genelab_source_path",
+    "_looks_like_genelab_alternate_sidecar_source",
     "_looks_like_rich_genelab_manifest",
     "_looks_like_rich_genelab_source",
     "_looks_like_rich_genelab_tsv",
     "_would_append_to_protected_genelab_source",
+    "_would_create_protected_genelab_sidecar",
     "_would_downgrade_protected_genelab_manifest",
     "_would_downgrade_protected_genelab_source",
     "guarded_bash",

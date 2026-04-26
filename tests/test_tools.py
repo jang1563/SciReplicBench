@@ -8,25 +8,31 @@ from scireplicbench.tools import (
     PROTECTED_GENELAB_OUTPUTS,
     PROTECTED_GENELAB_MANIFEST_MESSAGE,
     PROTECTED_GENELAB_OUTPUT_MESSAGE,
+    PROTECTED_GENELAB_SIDECAR_MESSAGE,
     PROTECTED_GENELAB_SOURCE_MESSAGE,
     PROTECTED_STARTER_LAUNCHER,
     PROTECTED_STARTER_MAIN_ANALYSIS,
     PROTECTED_SUBMISSION_LAUNCHER,
     PROTECTED_SUBMISSION_MAIN_ANALYSIS,
     PROTECTED_SUBMISSION_MANIFEST,
+    PROTECTED_SUBMISSION_SCAFFOLD,
     _bash_command_writes_protected_manifest,
     _bash_command_writes_protected_source,
     _bash_command_writes_protected_launcher,
+    _bash_command_writes_or_runs_protected_sidecar,
     _is_protected_genelab_output_path,
     _is_protected_genelab_manifest_path,
+    _is_protected_genelab_sidecar_path,
     _is_protected_genelab_source_path,
     _is_protected_launcher_path,
+    _looks_like_genelab_alternate_sidecar_source,
     _looks_like_rich_genelab_manifest,
     _looks_like_rich_genelab_source,
     _looks_like_rich_genelab_tsv,
     _normalize_workspace_text_path,
     _truncate_workspace_text,
     _would_append_to_protected_genelab_source,
+    _would_create_protected_genelab_sidecar,
     _would_downgrade_protected_genelab_manifest,
     _would_downgrade_protected_genelab_output,
     _would_downgrade_protected_genelab_source,
@@ -283,6 +289,120 @@ class ProtectedGeneLabManifestTest(unittest.TestCase):
         for cmd in blocked_commands:
             with self.subTest(cmd=cmd):
                 self.assertTrue(_bash_command_writes_protected_manifest(cmd))
+
+
+class ProtectedGeneLabSidecarTest(unittest.TestCase):
+    def _rich_manifest(self) -> str:
+        return ProtectedGeneLabManifestTest()._rich_manifest()
+
+    def _alternate_source(self) -> str:
+        return """from pathlib import Path
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
+from sklearn.metrics import roc_auc_score
+
+FEATURE_ROOT = Path("/workspace/input/paper_bundle/data/huggingface_dataset")
+LABEL_ROOT = Path("/workspace/input/paper_bundle/data/raw/GeneLab_benchmark/tasks")
+OUTPUT_ROOT = Path("/workspace/output/agent")
+LOMO_FIELDS = ["tissue", "fold", "model", "auroc"]
+
+fold_specs = discover_fold_specs()
+aligned = [load_aligned_fold(spec) for spec in fold_specs]
+with open(OUTPUT_ROOT / "lomo/summary.tsv", "w") as handle:
+    handle.write("tissue\tfold\tmodel\tauroc\n")
+"""
+
+    def test_protected_sidecar_path_recognizes_known_alternate_drivers(self) -> None:
+        self.assertTrue(_is_protected_genelab_sidecar_path("/workspace/submission/model_analysis.py"))
+        self.assertTrue(_is_protected_genelab_sidecar_path("/workspace/submission/evaluate_models.py"))
+        self.assertFalse(_is_protected_genelab_sidecar_path(PROTECTED_SUBMISSION_MAIN_ANALYSIS))
+        self.assertFalse(_is_protected_genelab_sidecar_path(PROTECTED_SUBMISSION_SCAFFOLD))
+        self.assertFalse(_is_protected_genelab_sidecar_path("/workspace/submission/helper.py"))
+
+    def test_alternate_sidecar_source_detection_requires_genelab_workflow_shape(self) -> None:
+        self.assertTrue(_looks_like_genelab_alternate_sidecar_source(self._alternate_source()))
+        self.assertFalse(
+            _looks_like_genelab_alternate_sidecar_source(
+                "def format_metric(value):\n    return f'{value:.3f}'\n"
+            )
+        )
+
+    def test_sidecar_guard_blocks_post_success_alternate_source(self) -> None:
+        class FakeEnv:
+            def __init__(self, files: dict[str, str]) -> None:
+                self.files = files
+
+            async def read_file(self, path: str) -> str:
+                if path not in self.files:
+                    raise FileNotFoundError(path)
+                return self.files[path]
+
+        env = FakeEnv({PROTECTED_SUBMISSION_MANIFEST: self._rich_manifest()})
+
+        self.assertTrue(
+            asyncio.run(
+                _would_create_protected_genelab_sidecar(
+                    env,
+                    "/workspace/submission/model_analysis.py",
+                    self._alternate_source(),
+                )
+            )
+        )
+        self.assertTrue(
+            asyncio.run(
+                _would_create_protected_genelab_sidecar(
+                    env,
+                    "/workspace/submission/helper.py",
+                    self._alternate_source(),
+                )
+            )
+        )
+        self.assertFalse(
+            asyncio.run(
+                _would_create_protected_genelab_sidecar(
+                    env,
+                    "/workspace/submission/helper.py",
+                    "def format_metric(value):\n    return f'{value:.3f}'\n",
+                )
+            )
+        )
+        self.assertIn("post-success sidecar", PROTECTED_GENELAB_SIDECAR_MESSAGE)
+
+    def test_sidecar_guard_allows_alternate_source_before_starter_success(self) -> None:
+        class FakeEnv:
+            async def read_file(self, path: str) -> str:
+                raise FileNotFoundError(path)
+
+        self.assertFalse(
+            asyncio.run(
+                _would_create_protected_genelab_sidecar(
+                    FakeEnv(),
+                    "/workspace/submission/model_analysis.py",
+                    self._alternate_source(),
+                )
+            )
+        )
+
+    def test_bash_guard_detects_known_post_success_sidecar_writes_and_runs(self) -> None:
+        blocked_commands = [
+            "cat <<'PY' > /workspace/submission/model_analysis.py\nprint('thin')\nPY",
+            "tee /workspace/submission/evaluate_models.py >/dev/null",
+            "cp /tmp/run_benchmark.py /workspace/submission/run_benchmark.py",
+            "python3 /workspace/submission/model_analysis.py",
+        ]
+        for cmd in blocked_commands:
+            with self.subTest(cmd=cmd):
+                self.assertTrue(_bash_command_writes_or_runs_protected_sidecar(cmd))
+
+        allowed_commands = [
+            "python3 /workspace/submission/main_analysis.py",
+            "python3 /workspace/submission/helper.py",
+            "cat /workspace/submission/model_analysis.py",
+        ]
+        for cmd in allowed_commands:
+            with self.subTest(cmd=cmd):
+                self.assertFalse(_bash_command_writes_or_runs_protected_sidecar(cmd))
 
 
 class ProtectedGeneLabSourceTest(unittest.TestCase):
