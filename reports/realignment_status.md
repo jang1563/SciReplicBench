@@ -19,19 +19,19 @@ This note records the repo-local realignment work added after the baseline v1.2 
 
 ## Latest GeneLab Pilot
 
-The April 25, 2026 v22 `genelab_benchmark` pilot validates the starter-manifest protection and GeneLab prompt reinforcement. Like v21, the agent copied the seeded starter and ran `bash /workspace/submission/run.sh` as the canonical workflow. Unlike v21, it left the structured starter manifest in place and recovered several execution/code leaves, though it still created an unhooked `model_analysis.py` sidecar after the canonical workflow had already succeeded.
+The April 26, 2026 v25 `genelab_benchmark` pilot validates the canonical-source hardening path. The agent first attempted to replace `main_analysis.py`, `run.sh`, and the structured manifest with thinner files; the tool guards blocked all three and steered it back to the seeded workflow. The final submission kept only the canonical `genelab_scaffold.py` and `main_analysis.py`, produced the expected nine output artifacts, and recovered execution evidence that earlier pilots left invisible to the judge.
 
-- Log: `logs/2026-04-26T02-23-40-00-00_scireplicbench_CpmQAN8de73bw6e7FfYT5j.eval`
-- Trace: `logs-prod/inspect-trace-genelab-pilot-v22.log.gz`
-- Score: `0.16561666666666666`
-- Category scores: `code_development=0.267`, `execution=0.21666666666666667`, `result_match=0.045`
-- Passed leaves: `9 / 55`
-- Judge failures: `2`
-- Zero-score `no_valid_evidence` responses: `37`
+- Log: `logs/2026-04-26T04-08-51-00-00_scireplicbench_j5nuaXbQta4PV9jUcEsWQX.eval`
+- Trace: `logs-prod/inspect-trace-genelab-pilot-v25.log.gz`
+- Score: `0.21738333333333332`
+- Category scores: `code_development=0.20800000000000002`, `execution=0.5783333333333333`, `result_match=0.0`
+- Passed leaves: `12 / 55`
+- Judge failures: `0`
+- Zero-score `no_valid_evidence` responses: `34`
 - Sample limit: none
-- Precheck: `ok=true`, `nontrivial_py_files=3`, `output_artifact_count=9`
+- Precheck: `ok=true`, `nontrivial_py_files=2`, `output_artifact_count=9`
 
-Compared with v21 (`0.08888333333333333`), v22 recovered `fit_xgboost`, `implement_negative_controls`, `classical_models_execute`, `bootstrap_ci_written`, and `negative_control_near_chance`, while losing only `compare_foundation_to_classical`. Compared with v20 (`0.15855`), v22 is slightly higher overall and adds `fit_random_forest`, `fit_xgboost`, `implement_negative_controls`, `classical_models_execute`, and `negative_control_near_chance`, but still loses `load_feature_matrices`, `attach_mission_tissue_labels`, `compute_bootstrap_and_permutation_metrics`, `go_nogo_summary_written`, and `geneformer_stage_executes`. The next local lever is to prevent or de-prioritize unhooked post-success sidecars so scorer context stays focused on the canonical starter source and measured artifacts.
+Compared with v22 (`0.16561666666666666`), v25 removes the unhooked sidecar source and increases total score by improving execution recognition for split manifests, AUROC tables, bootstrap CIs, permutation results, cross-mission/tissue transfer outputs, and go/no-go summaries. v23 confirmed that sidecar prevention alone kept the submission focused but starved the judge of source evidence (`0.05075`); v24 recovered source-focused code leaves (`0.1193`) but exposed overly strict judge handling of fallback code, example alternatives, and header-plus-row output evidence. The current local lever is to convert the remaining `no_valid_evidence` zeroes into grounded code/result matches without weakening the protected starter workflow.
 
 ## Remaining Human/Data Inputs
 

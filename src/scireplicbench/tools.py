@@ -72,8 +72,10 @@ PROTECTED_GENELAB_SOURCE_MESSAGE = (
     "contains the seeded benchmark-style analysis. Do not replace it with a "
     "thin partial script; keep the LOMO, transfer, negative-control, "
     "interpretability, go/no-go, foundation-model staging, and manifest outputs. "
-    "Use workspace_text_file for a complete replacement that preserves those "
-    "benchmark stages."
+    "If you improve it, first read the full file with workspace_text_file "
+    "using a large max_chars value, then write a complete replacement that "
+    "preserves those benchmark stages and integrates your changes into the "
+    "canonical workflow."
 )
 PROTECTED_GENELAB_MANIFEST_MESSAGE = (
     "GeneLab manifest protection: /workspace/output/submission_manifest.json "

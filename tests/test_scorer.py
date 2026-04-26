@@ -15,6 +15,7 @@ from scireplicbench.scorers import (
     _matching_evidence_sources,
     _reality_context_for_leaf,
     _skip_unhooked_genelab_sidecar_contents,
+    _source_excerpt_for_leaf,
     leaf_score_map_from_judgements,
     score_rubric_payload,
     summarize_score_report,
@@ -265,6 +266,39 @@ class ScorerTest(unittest.TestCase):
         self.assertIn("transfer/cross_tissue.tsv", excerpt)
         self.assertLess(len(excerpt), len(source))
 
+    def test_source_excerpt_for_leaf_centers_relevant_model_function(self) -> None:
+        source = "\n".join(
+            [
+                "import csv",
+                "def _elasticnet_scores(train_x, train_y, test_x):",
+                "    from sklearn.linear_model import LogisticRegression",
+                "    model = LogisticRegression(penalty='elasticnet', solver='saga')",
+                "    return model.predict_proba(test_x)",
+                *[f"# filler {index}" for index in range(300)],
+                "def _random_forest_scores(train_x, train_y, test_x):",
+                "    from sklearn.ensemble import RandomForestClassifier",
+                "    model = RandomForestClassifier(n_estimators=100)",
+                "    return model.predict_proba(test_x)",
+                "",
+            ]
+        )
+
+        excerpt = _source_excerpt_for_leaf(
+            source,
+            {
+                "category": "code_development",
+                "name": "Fit random forest",
+                "requirement": "Implement a random-forest baseline.",
+                "grading_notes": "The model should produce probability outputs for AUROC.",
+            },
+            max_chars=500,
+        )
+
+        self.assertIn("def _random_forest_scores", excerpt)
+        self.assertIn("RandomForestClassifier", excerpt)
+        self.assertIn("predict_proba", excerpt)
+        self.assertNotIn("LogisticRegression", excerpt)
+
     def test_reality_context_for_leaf_filters_to_eligible_source_family(self) -> None:
         reality = (
             "Submission file list:\n"
@@ -291,6 +325,36 @@ class ScorerTest(unittest.TestCase):
         self.assertIn("/workspace/output/agent/lomo/summary.tsv", execution_context)
         self.assertIn("ElasticNetLogReg\t0.72", execution_context)
         self.assertNotIn("/workspace/submission/main_analysis.py", execution_context)
+
+    def test_reality_context_for_leaf_uses_leaf_focused_source(self) -> None:
+        reality = (
+            "Submission file list:\n"
+            "/workspace/submission/main_analysis.py\n"
+            "\n--- /workspace/submission/main_analysis.py ---\n"
+            "def _elasticnet_scores(train_x, train_y, test_x):\n"
+            "    from sklearn.linear_model import LogisticRegression\n"
+            "    model = LogisticRegression(penalty='elasticnet', solver='saga')\n"
+            "    return model.predict_proba(test_x)\n"
+            + "\n".join(f"# filler {index}" for index in range(300))
+            + "\n"
+            "def _random_forest_scores(train_x, train_y, test_x):\n"
+            "    from sklearn.ensemble import RandomForestClassifier\n"
+            "    model = RandomForestClassifier(n_estimators=100)\n"
+            "    return model.predict_proba(test_x)\n"
+        )
+
+        code_context = _reality_context_for_leaf(
+            {
+                "category": "code_development",
+                "name": "Fit random forest",
+                "requirement": "Implement a random-forest baseline.",
+            },
+            reality,
+        )
+
+        self.assertIn("def _random_forest_scores", code_context)
+        self.assertIn("RandomForestClassifier", code_context)
+        self.assertNotIn("LogisticRegression", code_context)
 
     def test_judge_leaf_retries_once_after_parse_failure(self) -> None:
         class StubJudge:

@@ -31,6 +31,9 @@ class JudgeHelpersTest(unittest.TestCase):
         self.assertIn("evidence_quote", prompt)
         self.assertIn("For score 1, evidence_quote must appear verbatim", prompt)
         self.assertIn("no_valid_evidence", prompt)
+        self.assertIn("Interpret words like `or` and `such as` literally", prompt)
+        self.assertIn("a primary saved-source implementation can pass", prompt)
+        self.assertIn("headers plus representative rows", prompt)
 
     def test_prompt_adds_code_development_evidence_policy(self) -> None:
         prompt = format_leaf_judge_prompt(

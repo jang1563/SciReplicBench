@@ -546,8 +546,20 @@ def _reality_context_for_leaf(leaf: Mapping[str, Any], reality_context: str) -> 
             if str(source.path).startswith("/workspace/submission/")
             and not _skip_reality_file_contents(str(source.path))
         ]
+        focused = [
+            EvidenceSource(
+                source_type=source.source_type,
+                path=source.path,
+                matched_text=_source_excerpt_for_leaf(
+                    source.matched_text,
+                    leaf,
+                    max_chars=_JUDGE_MAX_SOURCE_FILE_CHARS,
+                ),
+            )
+            for source in eligible
+        ]
         return _format_file_content_sources(
-            eligible,
+            focused,
             fallback="(no eligible /workspace/submission implementation evidence was captured)",
         )
 
@@ -766,6 +778,251 @@ def _focused_source_excerpt(contents: str, *, max_chars: int) -> str:
     if not excerpt:
         return contents[:max_chars]
     marker = "\n[truncated to focused source excerpts]"
+    if len(excerpt) + len(marker) <= max_chars:
+        return excerpt + marker
+    if max_chars > len(marker):
+        return excerpt[: max_chars - len(marker)].rstrip() + marker
+    return excerpt[:max_chars]
+
+
+_LEAF_SOURCE_FOCUS_RULES: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
+    (
+        ("elastic", "logistic"),
+        (
+            "def _elasticnet_scores",
+            "LogisticRegression",
+            'penalty="elasticnet"',
+            'solver="saga"',
+        ),
+    ),
+    (
+        ("random forest", "random-forest", "random_forest"),
+        (
+            "def _random_forest_scores",
+            "RandomForestClassifier",
+        ),
+    ),
+    (
+        ("xgboost", "boosted-tree", "boosted tree"),
+        (
+            "def _xgboost_scores",
+            "XGBClassifier",
+            "GradientBoostingClassifier",
+        ),
+    ),
+    (
+        ("bootstrap", "confidence interval", "confidence intervals", "p-value", "pvalue"),
+        (
+            "def _bootstrap_ci",
+            "def _permutation_pvalue",
+        ),
+    ),
+    (
+        ("go/no-go", "go-nogo", "go_nogo"),
+        (
+            "def _build_go_nogo_rows",
+            "mean_auroc >= 0.7",
+            "max_perm < 0.05",
+        ),
+    ),
+    (
+        ("negative control", "negative-control", "label permutation", "housekeeping"),
+        (
+            "def _build_negative_control_rows",
+            "rng.shuffle",
+            "label_permutation",
+            "housekeeping_proxy_low_variance",
+        ),
+    ),
+    (
+        ("interpretability", "top feature", "feature importance"),
+        (
+            "def _build_interpretability_rows",
+        ),
+    ),
+    (
+        ("transfer", "cross-tissue", "cross tissue"),
+        (
+            "def _build_transfer_rows",
+        ),
+    ),
+    (
+        ("split", "leave-one-mission"),
+        (
+            "def discover_fold_specs",
+        ),
+    ),
+    (
+        ("feature matrix", "feature matrices", "sample alignment", "metadata"),
+        (
+            "def _read_feature_rows",
+            "def _read_label_rows",
+            "def _read_meta_rows",
+            "def load_aligned_fold",
+            "mission",
+            "tissue",
+        ),
+    ),
+    (
+        ("foundation", "geneformer"),
+        (
+            "def _build_foundation_rows",
+        ),
+    ),
+    (
+        ("manifest", "rerun", "workflow"),
+        (
+            "def _write_manifest",
+        ),
+    ),
+)
+
+
+def _leaf_source_focus_patterns(leaf: Mapping[str, Any]) -> tuple[str, ...]:
+    """Return implementation terms that make a source excerpt specific to a leaf."""
+
+    leaf_text = " ".join(
+        str(leaf.get(key, ""))
+        for key in ("id", "name", "requirement", "grading_notes")
+    ).lower()
+    patterns: list[str] = []
+    for triggers, additions in _LEAF_SOURCE_FOCUS_RULES:
+        if any(trigger in leaf_text for trigger in triggers):
+            patterns.extend(additions)
+
+    unique: list[str] = []
+    for pattern in patterns:
+        if pattern and pattern not in unique:
+            unique.append(pattern)
+    return tuple(unique)
+
+
+def _top_level_block_ranges(contents: str, lines: list[str]) -> list[tuple[int, int]]:
+    try:
+        tree = ast.parse(contents)
+    except SyntaxError:
+        tree = None
+
+    if tree is not None:
+        ranges: list[tuple[int, int]] = []
+        for node in tree.body:
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                continue
+            start = max(0, int(getattr(node, "lineno", 1)) - 1)
+            end_lineno = getattr(node, "end_lineno", None)
+            end = int(end_lineno) if end_lineno is not None else start + 1
+            ranges.append((start, min(len(lines), end)))
+        if ranges:
+            return ranges
+
+    starts = [
+        index
+        for index, line in enumerate(lines)
+        if re.match(r"^(?:async\s+def|def|class)\s+", line)
+    ]
+    ranges: list[tuple[int, int]] = []
+    for offset, start in enumerate(starts):
+        next_start = starts[offset + 1] if offset + 1 < len(starts) else len(lines)
+        end = next_start
+        for index in range(start + 1, next_start):
+            line = lines[index]
+            if not line.strip():
+                continue
+            if line.startswith((" ", "\t")):
+                continue
+            if line.lstrip().startswith("#"):
+                end = index
+                break
+            end = index
+            break
+        ranges.append((start, end))
+    return ranges
+
+
+def _source_excerpt_for_leaf(
+    contents: str,
+    leaf: Mapping[str, Any],
+    *,
+    max_chars: int,
+) -> str:
+    """Return source excerpts centered on the implementation requested by a leaf."""
+
+    patterns = _leaf_source_focus_patterns(leaf)
+    if not patterns:
+        if len(contents) <= max_chars:
+            return contents
+        return _focused_source_excerpt(contents, max_chars=max_chars)
+
+    lines = contents.splitlines()
+    lowered_lines = [line.lower() for line in lines]
+    block_ranges = _top_level_block_ranges(contents, lines)
+    selected_ranges: list[tuple[int, int]] = []
+
+    def add_range(start: int, end: int) -> None:
+        bounded_start = max(0, start)
+        bounded_end = min(len(lines), end)
+        if bounded_start < bounded_end:
+            selected_ranges.append((bounded_start, bounded_end))
+
+    for pattern in patterns:
+        lowered_pattern = pattern.lower()
+        for line_index, line in enumerate(lowered_lines):
+            if lowered_pattern not in line:
+                continue
+            containing_block = next(
+                (
+                    (start, end)
+                    for start, end in block_ranges
+                    if start <= line_index < end
+                ),
+                None,
+            )
+            if containing_block is not None:
+                add_range(containing_block[0], containing_block[1])
+            else:
+                add_range(line_index - 6, line_index + 24)
+            break
+
+    if not selected_ranges:
+        if len(contents) <= max_chars:
+            return contents
+        return _focused_source_excerpt(contents, max_chars=max_chars)
+
+    merged: list[tuple[int, int]] = []
+    for start, end in selected_ranges:
+        if any(
+            start >= existing_start and end <= existing_end
+            for existing_start, existing_end in merged
+        ):
+            continue
+        if merged and start >= merged[-1][0] and start <= merged[-1][1] + 2:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+        else:
+            merged.append((start, end))
+
+    chunks: list[str] = []
+    total = 0
+    last_end: int | None = None
+    for start, end in merged:
+        pieces: list[str] = []
+        if last_end is not None and start > last_end:
+            pieces.append("[...leaf source excerpt gap...]")
+        pieces.extend(lines[start:end])
+        chunk = "\n".join(pieces)
+        addition = ("\n" if chunks else "") + chunk
+        if total + len(addition) > max_chars:
+            remaining = max_chars - total
+            if remaining > 0:
+                chunks.append(addition[:remaining].rstrip())
+            break
+        chunks.append(addition)
+        total += len(addition)
+        last_end = end
+
+    excerpt = "".join(chunks).strip()
+    if not excerpt:
+        return _focused_source_excerpt(contents, max_chars=max_chars)
+    marker = "\n[truncated to leaf-focused source excerpts]"
     if len(excerpt) + len(marker) <= max_chars:
         return excerpt + marker
     if max_chars > len(marker):
