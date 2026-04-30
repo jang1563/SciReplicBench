@@ -21,7 +21,7 @@ class RubricLoadingTest(unittest.TestCase):
     def test_project_rubrics_validate(self) -> None:
         expected_leaf_counts = {
             "inspiration4_multiome": 90,
-            "squidpy_spatial": 65,
+            "squidpy_spatial": 58,
             "genelab_benchmark": 55,
         }
 

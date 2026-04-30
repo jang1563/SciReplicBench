@@ -1,0 +1,260 @@
+{
+  "schema_version": 1,
+  "strict_code_development": true,
+  "starter_assisted": true,
+  "starter_profile": "squidpy_offline_reviewer_path",
+  "description": "Deterministic source-pattern checks for Squidpy code-development leaves. This is intentionally reported as starter-assisted credit because the task seeds a reviewer-path implementation.",
+  "source_candidates": [
+    "/workspace/submission/main_analysis.py",
+    "/workspace/submission/squidpy_spatial_workflow.py",
+    "/workspace/submission/run.sh"
+  ],
+  "leaves": {
+    "squidpy_spatial/code_development/datasets_and_containers/load_visium_dataset": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "sq.datasets.visium_hne_adata"
+      ],
+      "any_regex": [
+        "visium_hne_adata\\.h5ad",
+        "visium_hne_adata"
+      ],
+      "all_ast_calls": [
+        "sq.datasets.visium_hne_adata"
+      ]
+    },
+    "squidpy_spatial/code_development/datasets_and_containers/load_seqfish_dataset": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "sq.datasets.seqfish"
+      ],
+      "any_regex": [
+        "seqfish\\.h5ad",
+        "seqfish"
+      ],
+      "all_ast_calls": [
+        "sq.datasets.seqfish"
+      ]
+    },
+    "squidpy_spatial/code_development/datasets_and_containers/attach_spatial_coordinates": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "sq.gr.spatial_neighbors",
+        "coord_type=\"grid\"",
+        "coord_type=\"generic\""
+      ],
+      "all_ast_calls": [
+        "sq.gr.spatial_neighbors"
+      ]
+    },
+    "squidpy_spatial/code_development/datasets_and_containers/load_image_container": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "visium_hne_image"
+      ],
+      "any_ast_calls": [
+        "sq.datasets.visium_hne_image",
+        "sq.im.ImageContainer"
+      ]
+    },
+    "squidpy_spatial/code_development/spatial_graph_neighbors/construct_geometry_aware_graph": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "sq.gr.spatial_neighbors",
+        "coord_type=\"grid\"",
+        "coord_type=\"generic\""
+      ],
+      "all_ast_calls": [
+        "sq.gr.spatial_neighbors"
+      ]
+    },
+    "squidpy_spatial/code_development/spatial_graph_neighbors/parameterize_graph_builder": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "n_neighs=6",
+        "n_rings=1"
+      ],
+      "all_ast_calls": [
+        "sq.gr.spatial_neighbors"
+      ]
+    },
+    "squidpy_spatial/code_development/spatial_graph_neighbors/run_neighborhood_enrichment": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "sq.gr.nhood_enrichment",
+        "nhood_enrichment_ranked.tsv"
+      ],
+      "all_regex": [
+        "cluster_key\\s*=\\s*(visium_key|VISIUM_KEY|VISIUM_CLUSTER_KEY|[\"']cluster[\"'])"
+      ],
+      "all_ast_calls": [
+        "sq.gr.nhood_enrichment"
+      ]
+    },
+    "squidpy_spatial/code_development/spatial_graph_neighbors/run_centrality_or_interaction": {
+      "metric": "source_patterns",
+      "any_literals": [
+        "sq.gr.centrality_scores",
+        "sq.gr.interaction_matrix"
+      ],
+      "all_literals": [
+        "centrality_scores.tsv",
+        "interaction_matrix.tsv"
+      ],
+      "any_ast_calls": [
+        "sq.gr.centrality_scores",
+        "sq.gr.interaction_matrix"
+      ]
+    },
+    "squidpy_spatial/code_development/spatial_graph_neighbors/run_cooccurrence": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "sq.gr.co_occurrence",
+        "cooccurrence_curves.tsv"
+      ],
+      "all_ast_calls": [
+        "sq.gr.co_occurrence"
+      ]
+    },
+    "squidpy_spatial/code_development/spatial_statistics/run_moran_or_geary": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "sq.gr.spatial_autocorr",
+        "moran",
+        "geary"
+      ],
+      "all_ast_calls": [
+        "sq.gr.spatial_autocorr"
+      ]
+    },
+    "squidpy_spatial/code_development/spatial_statistics/rank_spatial_genes": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "pval_norm_fdr_bh"
+      ],
+      "all_regex": [
+        "\\.insert\\(0,\\s*[\"']rank[\"']"
+      ]
+    },
+    "squidpy_spatial/code_development/spatial_statistics/run_ripley": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "sq.gr.ripley",
+        "mode=\"L\"",
+        "ripley_curves.tsv"
+      ],
+      "all_ast_calls": [
+        "sq.gr.ripley"
+      ]
+    },
+    "squidpy_spatial/code_development/spatial_statistics/compare_pattern_regimes": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "ripley_l",
+        "svg_summary.json",
+        "gene_localization.tsv"
+      ]
+    },
+    "squidpy_spatial/code_development/spatial_statistics/export_spatial_statistics": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "moran_ranked.tsv",
+        "geary_ranked.tsv",
+        "ripley_curves.tsv",
+        "svg_summary.json"
+      ]
+    },
+    "squidpy_spatial/code_development/image_features_segmentation/compute_image_features": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "sq.im.calculate_image_features",
+        "feature_matrix.tsv",
+        "feature_summary.json"
+      ],
+      "all_ast_calls": [
+        "sq.im.calculate_image_features"
+      ]
+    },
+    "squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "sq.im.segment",
+        "method=\"watershed\"",
+        "segmentation_feature_count"
+      ],
+      "all_ast_calls": [
+        "sq.im.segment"
+      ]
+    },
+    "squidpy_spatial/code_development/image_features_segmentation/join_image_features_to_adata": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "obs_id",
+        "feature_matrix.tsv"
+      ]
+    },
+    "squidpy_spatial/code_development/image_features_segmentation/compare_image_and_expression_structure": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "KMeans",
+        "feature_clusters.tsv"
+      ],
+      "all_ast_calls": [
+        "KMeans"
+      ]
+    },
+    "squidpy_spatial/code_development/interaction_reporting/run_ligrec_or_equivalent": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "sq.gr.ligrec",
+        "interactions=interactions",
+        "ligrec_ranked.tsv"
+      ],
+      "all_ast_calls": [
+        "sq.gr.ligrec"
+      ]
+    },
+    "squidpy_spatial/code_development/interaction_reporting/select_marker_genes_for_visualization": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "Olfm1",
+        "Ttr",
+        "gene_localization.tsv",
+        "marker_localization.svg"
+      ]
+    },
+    "squidpy_spatial/code_development/interaction_reporting/generate_spatial_visualizations": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "spatial_stats_plot.svg",
+        "marker_localization.svg"
+      ],
+      "any_ast_calls": [
+        "plt.savefig",
+        "fig.savefig",
+        "_write_svg_barplot",
+        "_write_marker_localization_svg"
+      ]
+    },
+    "squidpy_spatial/code_development/interaction_reporting/export_reproducible_summary": {
+      "metric": "source_patterns",
+      "all_literals": [
+        "report.html",
+        "submission_manifest.json"
+      ],
+      "any_ast_calls": [
+        "json.dump",
+        "Path.write_text",
+        "_write_visualization_report",
+        "_write_submission_manifest"
+      ]
+    },
+    "squidpy_spatial/code_development/interaction_reporting/seeded_permutation_pipeline": {
+      "metric": "source_patterns",
+      "any_regex": [
+        "(?:np\\.random\\.seed|random\\.seed)\\s*\\(\\s*\\d+",
+        "(?:seed|random_state)\\s*=\\s*\\d+"
+      ]
+    }
+  }
+}

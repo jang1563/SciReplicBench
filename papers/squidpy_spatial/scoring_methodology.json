@@ -1,0 +1,262 @@
+{
+  "squidpy_spatial/result_match/datasets_and_containers/image_shape_within_tolerance": {
+    "calibration_note": "These leaves act as gates rather than discriminative checks. Recommend collapsing into one gating leaf per asset.",
+    "expected": {
+      "channels": 3,
+      "x": 11291,
+      "y": 11757
+    },
+    "metric": "json_shape_within_tolerance",
+    "p_random_passes": "n/a (shape match \u2014 passes only if agent loaded correct asset)",
+    "tolerance_pct": 2.0
+  },
+  "squidpy_spatial/result_match/datasets_and_containers/label_vocabulary_matches_reference": {
+    "calibration_note": "Categorical match or structural sanity; not a numeric threshold.",
+    "metric": "json_set_match",
+    "p_random_passes": "n/a (categorical / structural)"
+  },
+  "squidpy_spatial/result_match/datasets_and_containers/seqfish_shape_within_tolerance": {
+    "calibration_note": "These leaves act as gates rather than discriminative checks. Recommend collapsing into one gating leaf per asset.",
+    "expected": [
+      19416,
+      351
+    ],
+    "metric": "json_shape_within_tolerance",
+    "p_random_passes": "n/a (shape match \u2014 passes only if agent loaded correct asset)",
+    "tolerance_pct": 1.0
+  },
+  "squidpy_spatial/result_match/datasets_and_containers/visium_shape_within_tolerance": {
+    "calibration_note": "These leaves act as gates rather than discriminative checks. Recommend collapsing into one gating leaf per asset.",
+    "expected": [
+      2688,
+      18078
+    ],
+    "metric": "json_shape_within_tolerance",
+    "p_random_passes": "n/a (shape match \u2014 passes only if agent loaded correct asset)",
+    "tolerance_pct": 1.0
+  },
+  "squidpy_spatial/result_match/image_features_segmentation/image_feature_cluster_alignment_ari": {
+    "n_trials": 200,
+    "p_random_passes": 0.0,
+    "random_max": 0.007213507345402371,
+    "random_mean": 0.0002733450936617078,
+    "random_min": -0.003541390733852614,
+    "random_p99": 0.004935267421300439,
+    "random_std": 0.001812791558156806,
+    "threshold": 0.25,
+    "z_score": 137.75806367956233
+  },
+  "squidpy_spatial/result_match/image_features_segmentation/image_feature_matrix_dimensionality_band": {
+    "calibration_note": "These leaves act as gates rather than discriminative checks. Recommend collapsing into one gating leaf per asset.",
+    "expected": {
+      "columns": 26,
+      "rows": 2688
+    },
+    "metric": "tsv_shape_within_tolerance",
+    "p_random_passes": "n/a (shape match \u2014 passes only if agent loaded correct asset)",
+    "tolerance_pct": 0.0
+  },
+  "squidpy_spatial/result_match/image_features_segmentation/image_feature_structure_nondegenerate": {
+    "calibration_note": "Categorical match or structural sanity; not a numeric threshold.",
+    "metric": "json_cluster_nondegenerate",
+    "p_random_passes": "n/a (categorical / structural)"
+  },
+  "squidpy_spatial/result_match/image_features_segmentation/segmentation_feature_count_band": {
+    "calibration_note": "These leaves require the agent to actually compute the right thing; tolerance is for numerical noise, not random guessing.",
+    "expected": 5,
+    "metric": "json_numeric_within_tolerance",
+    "p_random_passes": "n/a (numeric tolerance \u2014 random integer hits within X% only by coincidence; expected count is hidden so cannot be guessed without running pipeline correctly)",
+    "tolerance_pct": 20.0
+  },
+  "squidpy_spatial/result_match/image_features_segmentation/texture_feature_rank_overlap": {
+    "n_trials": 200,
+    "p_random_passes": 0.0,
+    "random_max": 0.3377399558371428,
+    "random_mean": 0.11519216690060713,
+    "random_min": 0.0,
+    "random_p99": 0.29013690686538535,
+    "random_std": 0.06837138034840996,
+    "threshold": 0.6,
+    "z_score": 7.090800721425942
+  },
+  "squidpy_spatial/result_match/interaction_reporting/ligrec_significant_count_band": {
+    "calibration_note": "These leaves require the agent to actually compute the right thing; tolerance is for numerical noise, not random guessing.",
+    "expected": 6,
+    "metric": "json_numeric_within_tolerance",
+    "p_random_passes": "n/a (numeric tolerance \u2014 random integer hits within X% only by coincidence; expected count is hidden so cannot be guessed without running pipeline correctly)",
+    "tolerance_pct": 25.0
+  },
+  "squidpy_spatial/result_match/interaction_reporting/ligrec_top_pair_overlap_threshold": {
+    "n_trials": 200,
+    "p_random_passes": 0.0,
+    "random_max": 0.07948330373855514,
+    "random_mean": 0.0011438659641899562,
+    "random_min": 0.0,
+    "random_p99": 0.024859785458197857,
+    "random_std": 0.006710016821504568,
+    "threshold": 0.6,
+    "z_score": 89.24808237686807
+  },
+  "squidpy_spatial/result_match/interaction_reporting/marker_localization_consistency": {
+    "n_trials": 200,
+    "p_random_passes": 0.025,
+    "random_max": 0.7176759797531296,
+    "random_mean": 0.030602157253066812,
+    "random_min": -0.5340078097697749,
+    "random_p99": 0.65020041327041,
+    "random_std": 0.276062601312552,
+    "threshold": 0.6,
+    "z_score": 2.0625678380182815
+  },
+  "squidpy_spatial/result_match/spatial_graph_neighbors/centrality_ranking_overlap_threshold": {
+    "n_trials": 200,
+    "p_random_passes": 0.0,
+    "random_max": 0.3741269841269841,
+    "random_mean": -0.0019797619047619065,
+    "random_min": -0.40285714285714275,
+    "random_p99": 0.3059579365079362,
+    "random_std": 0.15132996360919382,
+    "threshold": 0.8,
+    "z_score": 5.299543743867251
+  },
+  "squidpy_spatial/result_match/spatial_graph_neighbors/cooccurrence_curve_overlap_threshold": {
+    "n_trials": 200,
+    "p_random_passes": 0.0,
+    "random_max": 0.04563584685132352,
+    "random_mean": 0.0008383503029916933,
+    "random_min": -0.032230162687614555,
+    "random_p99": 0.032229121261648966,
+    "random_std": 0.01383126587536418,
+    "threshold": 0.85,
+    "z_score": 61.39435517681058
+  },
+  "squidpy_spatial/result_match/spatial_graph_neighbors/interaction_matrix_overlap_threshold": {
+    "n_trials": 200,
+    "p_random_passes": 0.0,
+    "random_max": 0.31726798456895006,
+    "random_mean": -0.005281106957964381,
+    "random_min": -0.25594355273941116,
+    "random_p99": 0.21293327869835424,
+    "random_std": 0.09727534943480472,
+    "threshold": 0.8,
+    "z_score": 8.278367660839654
+  },
+  "squidpy_spatial/result_match/spatial_graph_neighbors/known_spatial_association_recovered": {
+    "n_trials": 200,
+    "p_random_passes": 0.045,
+    "random_max": 1.0,
+    "random_mean": 0.045,
+    "random_min": 0.0,
+    "random_p99": 1.0,
+    "random_std": 0.20730412441627882,
+    "threshold": 1.0,
+    "z_score": 4.606758320361751
+  },
+  "squidpy_spatial/result_match/spatial_graph_neighbors/nhood_enrichment_rank_overlap": {
+    "n_trials": 200,
+    "p_random_passes": 0.0,
+    "random_max": 0.31980727170616857,
+    "random_mean": 0.06140180386493343,
+    "random_min": 0.0,
+    "random_p99": 0.2585116775813526,
+    "random_std": 0.0570411876410388,
+    "threshold": 0.65,
+    "z_score": 10.318827858899528
+  },
+  "squidpy_spatial/result_match/spatial_graph_neighbors/positive_neighbor_pair_recovered": {
+    "n_trials": 200,
+    "p_random_passes": 0.215,
+    "random_max": 0.4,
+    "random_mean": 0.045,
+    "random_min": 0.0,
+    "random_p99": 0.20199999999999818,
+    "random_std": 0.088175960442742,
+    "threshold": 0.2,
+    "z_score": 1.7578487290836025
+  },
+  "squidpy_spatial/result_match/spatial_graph_neighbors/seqfish_graph_edge_count_band": {
+    "calibration_note": "These leaves require the agent to actually compute the right thing; tolerance is for numerical noise, not random guessing.",
+    "expected": 116496,
+    "metric": "json_numeric_within_tolerance",
+    "p_random_passes": "n/a (numeric tolerance \u2014 random integer hits within X% only by coincidence; expected count is hidden so cannot be guessed without running pipeline correctly)",
+    "tolerance_pct": 2.0
+  },
+  "squidpy_spatial/result_match/spatial_graph_neighbors/visium_graph_edge_count_band": {
+    "calibration_note": "These leaves require the agent to actually compute the right thing; tolerance is for numerical noise, not random guessing.",
+    "expected": 15580,
+    "metric": "json_numeric_within_tolerance",
+    "p_random_passes": "n/a (numeric tolerance \u2014 random integer hits within X% only by coincidence; expected count is hidden so cannot be guessed without running pipeline correctly)",
+    "tolerance_pct": 2.0
+  },
+  "squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold": {
+    "n_trials": 200,
+    "p_random_passes": 0.0,
+    "random_max": 0.15148330373855504,
+    "random_mean": 0.0016351153527330324,
+    "random_min": 0.0,
+    "random_p99": 0.030778709595697912,
+    "random_std": 0.011441451391858929,
+    "threshold": 0.65,
+    "z_score": 56.6680626820305
+  },
+  "squidpy_spatial/result_match/spatial_statistics/olfm1_moran_close": {
+    "expected_value": 0.7632913155,
+    "n_trials": 4000,
+    "note": "p_random_passes = fraction of all genes whose Moran I is within absolute tolerance of expected; lower is better (more discriminative).",
+    "p_random_passes": 0.00525,
+    "population_mean": 0.188316414478602,
+    "population_n": 4000,
+    "population_std": 0.16710500822598387,
+    "threshold": 0.05
+  },
+  "squidpy_spatial/result_match/spatial_statistics/plp1_moran_close": {
+    "expected_value": 0.7476597898,
+    "n_trials": 4000,
+    "note": "p_random_passes = fraction of all genes whose Moran I is within absolute tolerance of expected; lower is better (more discriminative).",
+    "p_random_passes": 0.006,
+    "population_mean": 0.188316414478602,
+    "population_n": 4000,
+    "population_std": 0.16710500822598387,
+    "threshold": 0.05
+  },
+  "squidpy_spatial/result_match/spatial_statistics/ripley_curve_overlap_threshold": {
+    "n_trials": 200,
+    "p_random_passes": 0.0,
+    "random_max": 0.11170396845976485,
+    "random_mean": 0.002560511248033343,
+    "random_min": -0.12294757276337438,
+    "random_p99": 0.08836644016030382,
+    "random_std": 0.04278300106393501,
+    "threshold": 0.9,
+    "z_score": 20.976543637292558
+  },
+  "squidpy_spatial/result_match/spatial_statistics/spatial_localization_pattern_recovered": {
+    "n_trials": 200,
+    "p_random_passes": 0.01,
+    "random_max": 0.6268487695580796,
+    "random_mean": 0.002557920343342418,
+    "random_min": -0.7758936862250012,
+    "random_p99": 0.559848568864761,
+    "random_std": 0.25767322485108235,
+    "threshold": 0.6,
+    "z_score": 2.3186036500375176
+  },
+  "squidpy_spatial/result_match/spatial_statistics/svg_fdr_count_within_band": {
+    "calibration_note": "These leaves require the agent to actually compute the right thing; tolerance is for numerical noise, not random guessing.",
+    "expected": 3515,
+    "metric": "json_numeric_within_tolerance",
+    "p_random_passes": "n/a (numeric tolerance \u2014 random integer hits within X% only by coincidence; expected count is hidden so cannot be guessed without running pipeline correctly)",
+    "tolerance_pct": 15.0
+  },
+  "squidpy_spatial/result_match/spatial_statistics/top_moran_genes_overlap_threshold": {
+    "n_trials": 200,
+    "p_random_passes": 0.0,
+    "random_max": 0.09627260747711022,
+    "random_mean": 0.001288407261686671,
+    "random_min": 0.0,
+    "random_p99": 0.01652029105876883,
+    "random_std": 0.008306994903577584,
+    "threshold": 0.7,
+    "z_score": 84.11123406821861
+  }
+}

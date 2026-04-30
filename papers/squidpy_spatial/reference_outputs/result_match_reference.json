@@ -1,0 +1,475 @@
+{
+  "schema_version": 1,
+  "paper_id": "squidpy_spatial",
+  "strict_result_match": true,
+  "default_missing_reference_score": 0,
+  "notes": "Sealed result-match comparators are read only by the scorer and are deliberately excluded from sandbox staging. Ready leaves use benchmark-pinned public/offline artifacts; pending leaves remain zero until benchmark-author hidden references are populated.",
+  "leaves": {
+    "squidpy_spatial/result_match/spatial_graph_neighbors/visium_graph_edge_count_band": {
+      "status": "ready",
+      "metric": "json_numeric_within_tolerance",
+      "artifact": "/workspace/output/agent/spatial_graph_metrics.json",
+      "json_path_candidates": [
+        [
+          "visium",
+          "spatial_neighbors",
+          "edges"
+        ],
+        [
+          "visium",
+          "edges"
+        ],
+        [
+          "visium_graph_edge_count"
+        ]
+      ],
+      "expected": 15580,
+      "tolerance_pct": 2.0
+    },
+    "squidpy_spatial/result_match/spatial_graph_neighbors/seqfish_graph_edge_count_band": {
+      "status": "ready",
+      "metric": "json_numeric_within_tolerance",
+      "artifact": "/workspace/output/agent/spatial_graph_metrics.json",
+      "json_path_candidates": [
+        [
+          "seqfish",
+          "spatial_neighbors",
+          "edges"
+        ],
+        [
+          "seqfish",
+          "edges"
+        ],
+        [
+          "seqfish_graph_edge_count"
+        ]
+      ],
+      "expected": 116496,
+      "tolerance_pct": 2.0
+    },
+    "squidpy_spatial/result_match/spatial_statistics/top_moran_genes_overlap_threshold": {
+      "status": "ready",
+      "metric": "tsv_rank_biased_overlap",
+      "artifact": "/workspace/output/agent/autocorrelation/moran_ranked.tsv",
+      "column": "gene",
+      "expected": [
+        "Nrgn",
+        "Mbp",
+        "Camk2n1",
+        "Slc17a7",
+        "Ttr",
+        "Prkcd",
+        "Pmch",
+        "Fth1",
+        "Mobp",
+        "Cck",
+        "Agrp",
+        "Tcf7l2",
+        "Ddn",
+        "Olfm1",
+        "Agt",
+        "Tnnt1",
+        "Sparc",
+        "Nptxr",
+        "Plp1",
+        "Hcrt"
+      ],
+      "top_k": 20,
+      "minimum": 0.7,
+      "normalize": "gene_symbol",
+      "reference_artifact": "generated/visium_hne_moran_ranked.tsv"
+    },
+    "squidpy_spatial/result_match/spatial_statistics/olfm1_moran_close": {
+      "status": "ready",
+      "metric": "tsv_row_numeric_within_tolerance",
+      "artifact": "/workspace/output/agent/autocorrelation/moran_ranked.tsv",
+      "key_column": "gene",
+      "key_value": "Olfm1",
+      "value_column": "moran_i",
+      "expected": 0.7632913155,
+      "absolute_tolerance": 0.05,
+      "normalize": "gene_symbol",
+      "reference_artifact": "generated/visium_hne_moran_ranked.tsv"
+    },
+    "squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold": {
+      "status": "ready",
+      "metric": "tsv_rank_biased_overlap",
+      "artifact": "/workspace/output/agent/autocorrelation/geary_ranked.tsv",
+      "column": "gene",
+      "expected": [
+        "Nrgn",
+        "Mbp",
+        "Camk2n1",
+        "Slc17a7",
+        "Ttr",
+        "Prkcd",
+        "Pmch",
+        "Agrp",
+        "Fth1",
+        "Mobp",
+        "Cck",
+        "Tcf7l2",
+        "Ddn",
+        "Olfm1",
+        "Agt",
+        "Tnnt1",
+        "Sparc",
+        "Nptxr",
+        "Hcrt",
+        "Plp1"
+      ],
+      "top_k": 20,
+      "minimum": 0.65,
+      "normalize": "gene_symbol",
+      "reference_artifact": "generated/visium_hne_geary_ranked.tsv"
+    },
+    "squidpy_spatial/result_match/image_features_segmentation/image_feature_matrix_dimensionality_band": {
+      "status": "ready",
+      "metric": "tsv_shape_within_tolerance",
+      "artifact": "/workspace/output/agent/image_features/feature_matrix.tsv",
+      "exclude_columns": [
+        "obs_id"
+      ],
+      "expected": {
+        "rows": 2688,
+        "columns": 26
+      },
+      "tolerance_pct": 0.0,
+      "id_column": "obs_id",
+      "min_shared_rows": 2688,
+      "require_exact_ids": true,
+      "reference_artifact": "generated/visium_hne_image_feature_matrix.tsv"
+    },
+    "squidpy_spatial/result_match/image_features_segmentation/segmentation_feature_count_band": {
+      "status": "ready",
+      "metric": "json_numeric_within_tolerance",
+      "artifact": "/workspace/output/agent/image_features/feature_summary.json",
+      "json_path": [
+        "segmentation_feature_count"
+      ],
+      "expected": 5,
+      "tolerance_pct": 20.0,
+      "reference_artifact": "generated/visium_hne_image_feature_summary.json"
+    },
+    "squidpy_spatial/result_match/image_features_segmentation/image_feature_cluster_alignment_ari": {
+      "status": "ready",
+      "metric": "tsv_label_ari",
+      "artifact": "/workspace/output/agent/image_features/feature_clusters.tsv",
+      "reference_artifact": "generated/visium_hne_image_feature_clusters.tsv",
+      "id_column": "obs_id",
+      "label_column": "image_cluster",
+      "minimum": 0.25,
+      "min_shared": 2400
+    },
+    "squidpy_spatial/result_match/image_features_segmentation/texture_feature_rank_overlap": {
+      "status": "ready",
+      "metric": "tsv_rank_biased_overlap",
+      "artifact": "/workspace/output/agent/image_features/feature_ranking.tsv",
+      "column": "feature",
+      "expected": [
+        "segmentation_label",
+        "texture_ch-0_contrast_dist-1_angle-0.00",
+        "summary_ch-2_quantile-0.9",
+        "summary_ch-2_std",
+        "histogram_ch-0_bin-1",
+        "segmentation_ch-0_mean_intensity_mean",
+        "histogram_ch-0_bin-2",
+        "histogram_ch-0_bin-3",
+        "texture_ch-0_homogeneity_dist-1_angle-0.00",
+        "summary_ch-0_std"
+      ],
+      "top_k": 10,
+      "minimum": 0.6,
+      "reference_artifact": "generated/visium_hne_image_feature_ranking.tsv"
+    },
+    "squidpy_spatial/result_match/image_features_segmentation/image_feature_structure_nondegenerate": {
+      "status": "ready",
+      "metric": "json_cluster_nondegenerate",
+      "artifact": "/workspace/output/agent/image_features/feature_summary.json",
+      "json_path": [
+        "cluster_counts"
+      ],
+      "min_clusters": 3,
+      "max_fraction": 0.6,
+      "reference_artifact": "generated/visium_hne_image_feature_summary.json"
+    },
+    "squidpy_spatial/result_match/interaction_reporting/ligrec_top_pair_overlap_threshold": {
+      "status": "ready",
+      "metric": "tsv_rank_biased_overlap",
+      "artifact": "/workspace/output/agent/interactions/ligrec_ranked.tsv",
+      "column": "interaction_key",
+      "expected": [
+        "APOE|LRP1|Lateral_ventricle->Pyramidal_layer",
+        "APOE|LRP1|Lateral_ventricle->Lateral_ventricle",
+        "APOE|LRP1|Lateral_ventricle->Cortex_4",
+        "APOE|LRP1|Lateral_ventricle->Thalamus_2",
+        "APOE|LRP1|Lateral_ventricle->Striatum",
+        "APOE|LRP1|Lateral_ventricle->Cortex_2",
+        "APOE|LRP1|Lateral_ventricle->Cortex_1",
+        "APOE|LRP1|Lateral_ventricle->Hypothalamus_1",
+        "APOE|LRP1|Lateral_ventricle->Cortex_3",
+        "APOE|LRP1|Lateral_ventricle->Cortex_5",
+        "APOE|LRP1|Lateral_ventricle->Hypothalamus_2",
+        "APOE|LRP1|Lateral_ventricle->Thalamus_1",
+        "APOE|LRP1|Lateral_ventricle->Pyramidal_layer_dentate_gyrus",
+        "APOE|LRP1|Cortex_5->Pyramidal_layer",
+        "APOE|LRP1|Fiber_tract->Pyramidal_layer",
+        "APOE|LRP1|Cortex_5->Lateral_ventricle",
+        "APOE|LRP1|Lateral_ventricle->Hippocampus",
+        "APOE|LRP1|Cortex_5->Cortex_4",
+        "APOE|LRP1|Fiber_tract->Lateral_ventricle",
+        "APOE|LRP1|Cortex_5->Thalamus_2"
+      ],
+      "top_k": 20,
+      "minimum": 0.6,
+      "reference_artifact": "generated/visium_hne_ligrec_ranked.tsv"
+    },
+    "squidpy_spatial/result_match/interaction_reporting/ligrec_significant_count_band": {
+      "status": "ready",
+      "metric": "json_numeric_within_tolerance",
+      "artifact": "/workspace/output/agent/interactions/ligrec_summary.json",
+      "json_path": [
+        "significant_count_p_le_0_05"
+      ],
+      "expected": 6,
+      "tolerance_pct": 25.0,
+      "reference_artifact": "generated/visium_hne_ligrec_summary.json"
+    },
+    "squidpy_spatial/result_match/datasets_and_containers/label_vocabulary_matches_reference": {
+      "status": "ready",
+      "metric": "json_set_match",
+      "artifact": "/workspace/output/agent/dataset_manifest.json",
+      "json_path_candidates": [
+        [
+          "datasets",
+          "visium_hne_adata",
+          "cluster_labels"
+        ],
+        [
+          "datasets",
+          "visium_hne_adata",
+          "label_vocabulary",
+          "cluster"
+        ],
+        [
+          "visium_hne_adata",
+          "cluster_labels"
+        ],
+        [
+          "cluster_labels"
+        ]
+      ],
+      "expected": [
+        "Cortex_1",
+        "Cortex_2",
+        "Cortex_3",
+        "Cortex_4",
+        "Cortex_5",
+        "Fiber_tract",
+        "Hippocampus",
+        "Hypothalamus_1",
+        "Hypothalamus_2",
+        "Lateral_ventricle",
+        "Pyramidal_layer",
+        "Pyramidal_layer_dentate_gyrus",
+        "Striatum",
+        "Thalamus_1",
+        "Thalamus_2"
+      ],
+      "normalize": "label",
+      "minimum": 1.0,
+      "require_exact": true,
+      "reference_artifact": "generated/squidpy_label_vocabulary.json"
+    },
+    "squidpy_spatial/result_match/spatial_graph_neighbors/nhood_enrichment_rank_overlap": {
+      "status": "ready",
+      "metric": "tsv_rank_biased_overlap",
+      "artifact": "/workspace/output/agent/neighborhood/nhood_enrichment_ranked.tsv",
+      "column": "pair_key",
+      "expected": [
+        "Hippocampus|Pyramidal_layer",
+        "Cortex_4|Cortex_5",
+        "Hippocampus|Pyramidal_layer_dentate_gyrus",
+        "Lateral_ventricle|Striatum",
+        "Fiber_tract|Lateral_ventricle",
+        "Fiber_tract|Hypothalamus_2",
+        "Cortex_1|Cortex_4",
+        "Cortex_2|Cortex_5",
+        "Cortex_1|Cortex_3",
+        "Hypothalamus_2|Thalamus_1",
+        "Pyramidal_layer|Pyramidal_layer_dentate_gyrus",
+        "Fiber_tract|Hippocampus",
+        "Cortex_5|Lateral_ventricle",
+        "Hypothalamus_2|Thalamus_2",
+        "Hippocampus|Lateral_ventricle",
+        "Hypothalamus_2|Pyramidal_layer_dentate_gyrus",
+        "Lateral_ventricle|Pyramidal_layer",
+        "Cortex_3|Fiber_tract",
+        "Hypothalamus_2|Pyramidal_layer",
+        "Cortex_2|Striatum"
+      ],
+      "top_k": 20,
+      "minimum": 0.65,
+      "normalize": "pair_key_canonical",
+      "reference_artifact": "generated/visium_hne_nhood_enrichment_ranked.tsv"
+    },
+    "squidpy_spatial/result_match/spatial_graph_neighbors/centrality_ranking_overlap_threshold": {
+      "status": "ready",
+      "metric": "tsv_aligned_numeric_correlation",
+      "artifact": "/workspace/output/agent/neighborhood/centrality_scores.tsv",
+      "reference_artifact": "generated/visium_hne_centrality_scores.tsv",
+      "key_column": "cluster",
+      "value_columns": [
+        "degree_centrality",
+        "average_clustering",
+        "closeness_centrality"
+      ],
+      "correlation": "spearman",
+      "minimum": 0.8,
+      "min_shared": 12,
+      "normalize": "label"
+    },
+    "squidpy_spatial/result_match/spatial_graph_neighbors/cooccurrence_curve_overlap_threshold": {
+      "status": "ready",
+      "metric": "tsv_grouped_curve_correlation",
+      "artifact": "/workspace/output/agent/neighborhood/cooccurrence_curves.tsv",
+      "reference_artifact": "generated/visium_hne_cooccurrence_curves.tsv",
+      "group_column": "pair_key",
+      "x_column": "radius_index",
+      "value_column": "cooccurrence",
+      "correlation": "pearson",
+      "minimum": 0.85,
+      "min_groups": 200,
+      "min_points": 20
+    },
+    "squidpy_spatial/result_match/spatial_graph_neighbors/interaction_matrix_overlap_threshold": {
+      "status": "ready",
+      "metric": "tsv_aligned_numeric_correlation",
+      "artifact": "/workspace/output/agent/neighborhood/interaction_matrix.tsv",
+      "reference_artifact": "generated/visium_hne_interaction_matrix.tsv",
+      "key_column": "pair_key",
+      "value_column": "count",
+      "correlation": "spearman",
+      "minimum": 0.8,
+      "min_shared": 100
+    },
+    "squidpy_spatial/result_match/spatial_statistics/ripley_curve_overlap_threshold": {
+      "status": "ready",
+      "metric": "tsv_grouped_curve_correlation",
+      "artifact": "/workspace/output/agent/spatial_stats/ripley_curves.tsv",
+      "reference_artifact": "generated/seqfish_ripley_l_curves.tsv",
+      "group_column": "label",
+      "x_column": "radius_index",
+      "value_column": "ripley_l",
+      "correlation": "pearson",
+      "minimum": 0.9,
+      "min_groups": 20,
+      "min_points": 20,
+      "normalize": "label"
+    },
+    "squidpy_spatial/result_match/spatial_statistics/svg_fdr_count_within_band": {
+      "status": "ready",
+      "metric": "json_numeric_within_tolerance",
+      "artifact": "/workspace/output/agent/spatial_stats/svg_summary.json",
+      "json_path_candidates": [
+        [
+          "significant_gene_count"
+        ],
+        [
+          "svg_fdr_count"
+        ],
+        [
+          "moran",
+          "significant_gene_count"
+        ]
+      ],
+      "expected": 3515,
+      "tolerance_pct": 15.0,
+      "reference_artifact": "generated/visium_hne_svg_summary.json"
+    },
+    "squidpy_spatial/result_match/spatial_statistics/spatial_localization_pattern_recovered": {
+      "status": "ready",
+      "metric": "tsv_grouped_curve_correlation",
+      "artifact": "/workspace/output/agent/spatial_stats/gene_localization.tsv",
+      "reference_artifact": "generated/visium_hne_gene_localization.tsv",
+      "group_column": "gene",
+      "x_column": "cluster",
+      "value_column": "mean_expression",
+      "groups": [
+        "Olfm1",
+        "Ttr"
+      ],
+      "correlation": "pearson",
+      "minimum": 0.7,
+      "min_groups": 2,
+      "min_points": 12
+    },
+    "squidpy_spatial/result_match/datasets_and_containers/dataset_assets_correct_shape": {
+      "status": "ready",
+      "metric": "all_checks",
+      "checks": [
+        {
+          "metric": "json_shape_within_tolerance",
+          "artifact": "/workspace/output/agent/dataset_manifest.json",
+          "json_path_candidates": [
+            [
+              "datasets",
+              "visium_hne_adata",
+              "shape"
+            ],
+            [
+              "visium_hne_adata",
+              "shape"
+            ]
+          ],
+          "expected": [
+            2688,
+            18078
+          ],
+          "tolerance_pct": 1.0
+        },
+        {
+          "metric": "json_shape_within_tolerance",
+          "artifact": "/workspace/output/agent/dataset_manifest.json",
+          "json_path_candidates": [
+            [
+              "datasets",
+              "seqfish",
+              "shape"
+            ],
+            [
+              "seqfish",
+              "shape"
+            ]
+          ],
+          "expected": [
+            19416,
+            351
+          ],
+          "tolerance_pct": 1.0
+        },
+        {
+          "metric": "json_shape_within_tolerance",
+          "artifact": "/workspace/output/agent/dataset_manifest.json",
+          "json_path_candidates": [
+            [
+              "datasets",
+              "visium_hne_image",
+              "sizes"
+            ],
+            [
+              "visium_hne_image",
+              "sizes"
+            ]
+          ],
+          "expected": {
+            "y": 11757,
+            "x": 11291,
+            "channels": 3
+          },
+          "tolerance_pct": 2.0
+        }
+      ]
+    }
+  }
+}

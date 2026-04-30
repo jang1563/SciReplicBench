@@ -129,7 +129,7 @@ SQUIDPY_FALLBACK_FAIL_QUOTE = "/workspace/submission/pipeline.py"
 
 SQUIDPY_TARGET_LEAF_IDS = (
     "squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features",
-    "squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes",
+    "squidpy_spatial/execution/datasets_and_containers/dataset_assets_loaded",
     "squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold",
 )
 
