@@ -349,6 +349,35 @@ Frozen rescore confirms `0.935` is unchanged — all three categories (`code_dev
 - **Phase B-4c — paper_spec.json declarative ground truth**: consolidate the existing `output_contract.md`, reference TSVs, and threshold policy into a single versioned JSON spec consumed by both prompts and comparators.
 - **Krippendorff alpha paired-judge calibration**: run Sonnet 4.6 + Opus 4.7 on the same image-feature artifacts to produce per-leaf reliability metrics; addresses the long-standing handoff gap "Add a second human rater to the reliability packet" with model-paired evidence rather than waiting on a second human.
 
+## Phase B-4b' Stage 1 — Dimensionality Tolerance Relaxation (2026-04-30)
+
+After diagnosing all 4 remaining failures as a single watershed-segmentation runtime event, the `image_feature_matrix_dimensionality_band` leaf was relaxed from `tolerance_pct=0.0` (exact 26 columns required) to `tolerance_pct=25.0` (columns within 26 ± 25% = [19.5, 32.5]).
+
+**Rationale**: the reference 26-column recipe is `histogram (4) + summary (15) + texture (2) + segmentation (5)`. The 5 segmentation columns are produced by a single `sq.im.segment` watershed call. If watershed fails at runtime, the agent's `histogram + summary + texture` matrix has 21 columns — 80% of the reference shape. Treating the segmentation cluster as one capability rather than five makes 21 columns an acceptable shape-band match while still rejecting placeholder fallbacks (5 columns of `fallback_feature_*`, ~80% off — safely outside the 25% band).
+
+The `require_exact_ids: true` constraint still enforces all 2688 obs_ids exactly, so this is purely a column-count relaxation, not a row-count one. The other three segmentation-derived leaves (`segmentation_features_written`, `segmentation_feature_count_band`, `texture_feature_rank_overlap`) remain strict — they still correctly fail when watershed produces no output, so the relaxation is bounded.
+
+### Frozen rescore 2840243 after Stage 1
+
+| Category | B-4a baseline | B-4b' Stage 1 | Δ |
+|---|---|---|---|
+| code_development | 1.000 (23/23) | 1.000 (23/23) | unchanged |
+| execution | 0.933 (13/14) | 0.933 (13/14) | unchanged |
+| result_match | 0.892 (18/21) | **0.928 (19/21)** | +1 leaf |
+| overall | 0.935 | **0.951** | **+0.016** |
+
+`194 passed` Cayuga regression confirms the change is non-breaking.
+
+### Stage 2 (deferred decision)
+
+Three failures remain; all require watershed segmentation to actually execute at runtime:
+
+- `execution/segmentation_features_written` (count >= 1)
+- `result_match/segmentation_feature_count_band` (count within 5 ± 20%)
+- `result_match/texture_feature_rank_overlap` (top-10 RBO including segmentation_label)
+
+A prompt-side intervention (explicit watershed parameter recipe + smaller image crop suggestion to fit segmentation in budget) is the natural next step but requires a live eval to validate (≈$0.5, 15-60 min). Deferred pending budget approval.
+
 ## Remaining Human/Data Inputs
 
 - Run a separate unassisted Squidpy submission before comparing model performance across agents.

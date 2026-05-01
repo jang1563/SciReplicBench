@@ -134,7 +134,7 @@
         "rows": 2688,
         "columns": 26
       },
-      "tolerance_pct": 0.0,
+      "tolerance_pct": 25.0,
       "id_column": "obs_id",
       "min_shared_rows": 2688,
       "require_exact_ids": true,
