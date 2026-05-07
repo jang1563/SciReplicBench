@@ -103,12 +103,38 @@ This document names the concrete failure modes observed while running SciReplicB
 - **Likely mitigation path:** once the reviewer hold is lifted, confirm the provisional 20-leaf panel with a second rater and then decide whether the fresh live successor `f2KkxWjV` should replace `mZHU6eGr` inside that panel. A blinded JSON/CSV packet for the current panel exists under `judge_eval/review_packet_v0_1_false_positive_and_mZHU6eGr_blinded.*`.
 - **Current status:** the exact-leaf guardrail prompt plus one retry for malformed outputs removed the largest source of drift on `o3-mini`, and the execution-clarified follow-up removed the earlier missing-targeted-leaf issue. The current scorer already contains a narrow deterministic fix for the one historically disputed execution-statistics pattern, and the fresh live rerun `f2KkxWjV` no longer grants that historical `moran_geary_written` leaf at all. The earlier quota-blocked attempts (`fa5G3aTA` and `g7eC3Ph9`) remain useful only as failure-history artifacts, and `scripts/run_evidence_policy_probe.py` now fails cleanly on that incomplete-log shape instead of cascading into a secondary `_write_example` error.
 
+### 8. GeneLab scaffold-hardening oscillation and post-success sidecar drift
+
+- **What it is:** Once the GeneLab package stopped failing on path layout, newline corruption, and sample-ID alignment, the same model began oscillating between two different nonzero-effort but still benchmark-insufficient behaviors:
+  - a real executed artifact that proves the model can load one fold correctly and write a real AUROC table, but still hard-codes a single demo fold and fills the rest of the required outputs with placeholders;
+  - a stricter no-placeholder rerun that discovers the real `fold_*` directories and uses probability-based AUROC, but burns the whole budget on exploratory scripts and exits with only a manifest.
+- **Where seen:** `logs-prod/2026-04-22T14-19-06-00-00_scireplicbench_3L2uDjJEF6FyrXXkYsLQ9Z.eval` and `logs-prod/2026-04-22T15-34-37-00-00_scireplicbench_2mqb75xQbNCAaqa3p4z4Cs.eval`.
+- **Why it matters:** This is a more mature failure mode than the earlier GeneLab misses. The agent is no longer blocked by public data, Docker image setup, or CSV-index confusion. It can write saved Python, align `X`/`y`, and run real classifiers. The remaining problem is that a naturalistic agent can still fork the workflow into unhooked analysis drivers or thin manifest/source replacements unless the task scaffold and tool guards protect the canonical reviewer path.
+- **Observed shape in `3L2uDjJE`:**
+  - `precheck.ok = true`
+  - `leaves_graded = 55`
+  - `output_artifact_count = 5`
+  - non-trivial submission file: `/workspace/submission/analysis.py`
+  - real `lomo/summary.tsv` written with AUROC rows
+  - but `transfer/cross_tissue.tsv`, `negative_controls/summary.tsv`, and `interpretability/top_features.tsv` are still placeholder text files
+  - workflow remains hard-coded to one example fold (`A2_gastrocnemius_lomo/fold_RR-1_test`)
+- **Observed shape in `2mqb75xQ`:**
+  - `precheck.ok = true`
+  - `leaves_graded = 55`
+  - `output_artifact_count = 1` (`/workspace/output/submission_manifest.json` only)
+  - non-trivial submission files: `/workspace/submission/check_folds.py`, `check_labels_metadata.py`, `load_and_process.py`
+  - code now uses `predict_proba` and iterates `A*_lomo/fold_*`
+  - but `run.sh` still only launches exploration code and never writes the required benchmark TSV outputs
+- **Mitigation shipped through the April 26 v25 pilot:** move from prompt-hardening to scaffold/tool hardening. The GeneLab starter now supplies a canonical benchmark-shaped workflow around fold discovery, output writers, partial-status TSV emission, and manifest generation. The custom tools protect the seeded `run.sh`, canonical `main_analysis.py`, structured manifest, rich TSV outputs, and post-success sidecar drivers from thin replacement after the starter has already produced the reviewer-path artifact set.
+- **v25 evidence:** `logs/2026-04-26T04-08-51-00-00_scireplicbench_j5nuaXbQta4PV9jUcEsWQX.eval` shows the agent attempting to replace `main_analysis.py`, `run.sh`, and the structured manifest with thinner files; the guards block all three and steer it back to the seeded workflow. The final submission keeps only the canonical `genelab_scaffold.py` and `main_analysis.py`, produces nine output artifacts, passes precheck, grades all 55 leaves, and scores `0.21738333333333332`.
+- **Remaining limitation:** v25 is a pilot-quality scaffold validation, not a production claim. `result_match` remains 0 because GeneLab hidden references are not sealed yet, and judge-panel credibility still depends on adding a second human rater.
+
 ## Anticipated but not yet observed
 
 Modes the design expects but that no log evidence yet supports:
 
 - **Method-equivalence drift.** e.g., agent uses `scanpy.pp.combat` where the rubric expects `ComBat-seq` on counts. Will only show up once a stronger agent produces real analyses.
 - **Self-grading-bias artifact.** If the Squidpy-anchored judge grades the authored papers leniently, we expect a systematic gap between Squidpy and authored-paper judge-human agreement. The file `judge_eval/human_grades.json` now contains a provisional 20-leaf panel spanning both the archived false-positive case and the stable live-judge case, and blinded second-rater exports now exist under `judge_eval/review_packet_v0_1_false_positive_and_mZHU6eGr_blinded.json` and `.csv`, but that second human panel still needs to be filled before the bias can be quantified robustly.
-- **Evaluation leakage across benchmark splits.** For `genelab_benchmark` specifically, an agent could accidentally leak mission-level information across LOMO folds. The rubric flags this, but no production run has executed it yet.
+- **Evaluation leakage across benchmark splits.** For `genelab_benchmark` specifically, an agent could accidentally leak mission-level information across LOMO folds. The latest April 2026 pilots now read real `fold_*` directories and one early run (`3L2uDjJE`) executes a single fold correctly, but there is still no production-ready hidden-reference result-match lane whose split integrity can be judged confidently.
 
 This file is a living document: expand each entry with its real signal as more runs land.

@@ -257,10 +257,19 @@ The hidden reference has exactly 26 image-feature columns from `sq.im.calculate_
 
 ```python
 features_kwargs={
-    "histogram": {"bins": 4, "channels": [0]},
-    "summary": {"quantiles": [0.9, 0.5, 0.1]},
-    "texture": {"distances": [1], "angles": [0.0], "props": ["contrast", "homogeneity"], "channels": [0]},
-    "segmentation": {"features": ["label", "area", "channel_mean"], "channels": [0]},
+    "histogram": {"channels": [0], "bins": 4},
+    "segmentation": {
+        "label_layer": "segmented_watershed",
+        "props": ["label", "area", "mean_intensity"],
+        "channels": [0],
+    },
+    "summary": {"channels": [0, 1, 2]},
+    "texture": {
+        "channels": [0],
+        "props": ["contrast", "homogeneity"],
+        "distances": [1],
+        "angles": [0],
+    },
 }
 ```
 

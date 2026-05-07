@@ -48,6 +48,8 @@ logs-*/
 *.eval
 eval_logs/
 submissions/
+local_workspace/
+hpc_workspace/
 *.log.gz
 
 # Docker state

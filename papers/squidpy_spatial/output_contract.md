@@ -108,29 +108,47 @@ For ligand-receptor analysis, use the staged 16-pair panel at `data/ligrec_inter
 
 If ligand-receptor permutations exceed the remaining runtime, still write an executed interaction summary based on the completed custom-panel mean table and record the bounded setting or timeout in `ligrec_summary.json`. This fallback will not necessarily receive full result-match credit, but it keeps the submission executable and scientifically inspectable.
 
-Image features can also be slow on shared HPC nodes. Run the benchmark-standard image-feature recipe when feasible, but do not let it block final scoring. A robust implementation first computes non-segmentation features such as `['histogram', 'summary', 'texture']` (which together produce roughly 20–26 real columns and is the minimum credible feature matrix), writes the four image-feature artifacts, and only then attempts watershed segmentation or segmentation-derived refinements. Wrap each long image call with a real Python timeout such as `signal.alarm(...)`; checking elapsed time after a call returns does not stop a hanging `sq.im.segment` or `sq.im.calculate_image_features` call. If the full `['histogram', 'segmentation', 'summary', 'texture']` recipe exceeds the remaining runtime, keep the smaller executed feature matrix from the previous step (which already has real values) and record the actual `feature_families` and timeout status in `feature_summary.json`, then continue to visualizations and manifests.
+Image features can also be slow on shared HPC nodes. Run the benchmark-standard image-feature recipe when feasible, but do not let it block final scoring. A robust implementation may first checkpoint non-segmentation features such as `['histogram', 'summary', 'texture']` (which together produce roughly 20-26 real columns and is the minimum credible feature matrix), write the four image-feature artifacts, and then attempt watershed segmentation plus a full overwrite/refinement. Wrap each long image call with a real Python timeout such as `signal.alarm(...)`; checking elapsed time after a call returns does not stop a hanging `sq.im.segment` or `sq.im.calculate_image_features` call. If the full `['histogram', 'segmentation', 'summary', 'texture']` recipe exceeds the remaining runtime, keep the smaller executed feature matrix from the checkpointed step (which already has real values) and record the actual `feature_families` and timeout status in `feature_summary.json`, then continue to visualizations and manifests.
 
 A placeholder fallback is **not acceptable**. Specifically, do not write a `feature_summary.json` whose `feature_families` is `["fallback"]`, whose `status` is `"fallback_placeholder"`, or whose `feature_matrix.tsv` columns are named `fallback_feature_*` with all zero variance. Likewise, `feature_clusters.tsv` must have at least 3 distinct `image_cluster` values with no single cluster containing more than 60% of observations; assigning every `obs_id` to cluster `0` will fail the `image_feature_structure_nondegenerate` check. Concretely, even when watershed segmentation cannot run, the `histogram`/`summary`/`texture` matrix already gives real `texture_ch-*`, `summary_ch-*`, and `histogram_ch-*` columns; KMeans on those columns with `n_clusters=4` and a fixed `random_state` gives non-degenerate clusters, and `segmentation_feature_count` should then truthfully report `0`. Placeholder feature names like `fallback_feature_0` will fail every image-feature result-match leaf simultaneously.
 
-The benchmark-pinned image-feature recipe expects exactly 26 feature columns. To match this shape, call `sq.im.calculate_image_features` with these `features_kwargs`:
+The benchmark-pinned image-feature recipe expects exactly 26 feature columns. To match this shape, first create the segmentation layer and then call `sq.im.calculate_image_features` with the same `features_kwargs` used by the hidden reference generator:
 
 ```python
+sq.im.segment(
+    image,
+    layer="image",
+    method="watershed",
+    channel=0,
+    layer_added="segmented_watershed",
+    copy=False,
+)
+
 sq.im.calculate_image_features(
     adata,
     image,
     layer="image",
-    features=["histogram", "summary", "texture", "segmentation"],
+    features=["histogram", "segmentation", "summary", "texture"],
     features_kwargs={
-        "histogram": {"bins": 4, "channels": [0]},
-        "summary": {"quantiles": [0.9, 0.5, 0.1]},
-        "texture": {"distances": [1], "angles": [0.0], "props": ["contrast", "homogeneity"], "channels": [0]},
-        "segmentation": {"features": ["label", "area", "channel_mean"], "channels": [0]},
+        "histogram": {"channels": [0], "bins": 4},
+        "segmentation": {
+            "label_layer": "segmented_watershed",
+            "props": ["label", "area", "mean_intensity"],
+            "channels": [0],
+        },
+        "summary": {"channels": [0, 1, 2]},
+        "texture": {
+            "channels": [0],
+            "props": ["contrast", "homogeneity"],
+            "distances": [1],
+            "angles": [0],
+        },
     },
     copy=True,
 )
 ```
 
-Default `features_kwargs` expands texture into many distance/angle combinations and produces ~100+ off-shape columns that fail `image_feature_matrix_dimensionality_band` (±10% of 26) and `texture_feature_rank_overlap` (top-10 RBO against names that include `dist-1` and `angle-0.00`). Run `sq.im.segment(image, layer="image", method="watershed")` BEFORE the `calculate_image_features` call so the segmentation channel exists; if segmentation itself fails, leave the `sq.im.segment` call in the saved source and let the histogram/summary/texture path complete.
+Default `features_kwargs` expands texture into many distance/angle combinations and produces ~100+ off-shape columns that fail `image_feature_matrix_dimensionality_band` (currently a 25% band around 26 columns) and `texture_feature_rank_overlap` (top-10 RBO against names that include `dist-1` and `angle-0.00`). Run `sq.im.segment(image, layer="image", method="watershed", channel=0, layer_added="segmented_watershed", copy=False)` BEFORE the full `calculate_image_features` call so the segmentation label layer exists; if segmentation itself fails, leave the `sq.im.segment` call in the saved source and let the histogram/summary/texture checkpoint complete.
 
 When flattening `sq.gr.ligrec` output, the `interaction_key` must include both genes and both clusters:
 

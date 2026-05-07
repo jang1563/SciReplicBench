@@ -4,7 +4,7 @@ This report tracks SciReplicBench agent runs with rubric-tree scores aggregated 
 
 ## Current coverage
 
-Two scientific sandboxes have been exercised end-to-end on the `squidpy_spatial` rubric, plus a ladder of evidence-policy probes ranging from deterministic internal fixtures to three-model frontier-agent traces and a first non-mock-judge extension. The smoke sandbox (see [../environments/Dockerfile.smoke](../environments/Dockerfile.smoke)) is a minimal runtime-wiring validator. The production sandbox (see [../environments/Dockerfile](../environments/Dockerfile) + [compose.squidpy_spatial.yaml](../environments/compose.squidpy_spatial.yaml)) ships scanpy 1.10.1 + squidpy 1.6.0 + spatialdata. As of April 21, 2026, the paper-specific `inspiration4_multiome` scientific image also builds cleanly, and `papers/inspiration4_multiome/data/prepare_data.sh` stages the public `inspiration4-omics` repository under `papers/inspiration4_multiome/data/raw/`. The remaining blocker for live benchmark runs is still the benchmark-author AnnData or MuData cache expected under `papers/inspiration4_multiome/data/cache/`. `genelab_benchmark` remains defined but unbuilt.
+Two scientific sandboxes have been exercised end-to-end on the `squidpy_spatial` rubric, plus a ladder of evidence-policy probes ranging from deterministic internal fixtures to three-model frontier-agent traces and a first non-mock-judge extension. The smoke sandbox (see [../environments/Dockerfile.smoke](../environments/Dockerfile.smoke)) is a minimal runtime-wiring validator. The production sandbox (see [../environments/Dockerfile](../environments/Dockerfile) + [compose.squidpy_spatial.yaml](../environments/compose.squidpy_spatial.yaml)) ships scanpy 1.10.1 + squidpy 1.6.0 + spatialdata. As of April 21, 2026, the paper-specific `inspiration4_multiome` scientific image also builds cleanly, and `papers/inspiration4_multiome/data/prepare_data.sh` now stages both the public `inspiration4-omics` repository under `papers/inspiration4_multiome/data/raw/` and the public `OSD-570` / `GLDS-562` processed files under `papers/inspiration4_multiome/data/cache/osdr_public/`, with a local manifest at `papers/inspiration4_multiome/data/cache/osdr_public/manifest.tsv`. The remaining blocker for live benchmark runs there is still the benchmark-author AnnData or MuData cache expected under `papers/inspiration4_multiome/data/cache/`, because the public OSDR files are DEG/DAR result tables plus ISA metadata rather than the reviewer-ready multimodal object. `genelab_benchmark` now builds its paper-specific image and stages both the public GitHub repo and the Hugging Face `A*_lomo` feature matrices with Git LFS materialization. Its April 2026 pilot ladder moved past the original public-data, Docker, durable-file, and sample-ID blockers: early runs oscillated between toy single-fold output and debug-only exploration, and the April 26 v25 starter-protected pilot now produces the full nine-artifact canonical output set with a nonzero score. GeneLab is therefore pilot-capable but still not production-ready until hidden references and judge-panel credibility gates are complete.
 
 | Run | Paper | Agent | Sandbox | Msg limit | Precheck | Leaves graded | Overall score |
 |---|---|---|---|---:|---|---|---:|
@@ -34,6 +34,14 @@ Two scientific sandboxes have been exercised end-to-end on the `squidpy_spatial`
 | `TnUTWPrT` | squidpy_spatial | openai/gpt-4o-mini | **production probe** | 20 | **passed** (v1.2 + execution-clarified control, mock judge) | 130 / 130 | **0.022** |
 | `mZHU6eGr` | squidpy_spatial | openai/gpt-4o-mini | **production probe** | 20 | **passed** (v1.2 + execution-clarified control + live `o3-mini` judge) | 130 / 130 | **0.043** |
 | `f2KkxWjV` | squidpy_spatial | openai/gpt-4o-mini | **production probe** | 20 | **passed** (v1.2 + execution-clarified control + live `o3-mini` judge + post-fix rerun) | 130 / 130 | **0.043** |
+| `BmPYCdd9` | genelab_benchmark | openai/gpt-4o-mini | **production** | 60 | **failed** | 0 / 55 | **0.000** |
+| `EBqDy3e3` | genelab_benchmark | openai/gpt-4o-mini | **production** | 60 | **failed** | 0 / 55 | **0.000** |
+| `NBYyMZFQ` | genelab_benchmark | openai/gpt-4o-mini | **production** | 60 | **failed** | 0 / 55 | **0.000** |
+| `QAF72c7N` | genelab_benchmark | openai/gpt-4o-mini | **production** | 60 | **passed** | 55 / 55 | **0.000** |
+| `KjSseoSX` | genelab_benchmark | openai/gpt-4o-mini | **production** | 60 | **failed** | 0 / 55 | **0.000** |
+| `3L2uDjJE` | genelab_benchmark | openai/gpt-4o-mini | **production** | 60 | **passed** | 55 / 55 | **0.000** |
+| `2mqb75xQ` | genelab_benchmark | openai/gpt-4o-mini | **production** | 60 | **passed** | 55 / 55 | **0.000** |
+| `j5nuaXbQ` | genelab_benchmark | openai/gpt-4o-mini | **pilot** | 60 | **passed** | 55 / 55 | **0.217** |
 
 Log paths:
 
@@ -84,6 +92,19 @@ Log paths:
 - `logs-prod/2026-04-17T17-31-52-00-00_squidpy-evidence-policy-agent-probe_TnUTWPrTLQUM24gGo9j6ya.eval` (execution-clarified mock-baseline rerun; keeps the same three intended control passes, but now the runtime line names `sq.datasets.visium_hne_adata()` explicitly)
 - `logs-prod/2026-04-17T17-33-34-00-00_squidpy-evidence-policy-agent-probe_mZHU6eGr7VowxLNyBX8KZJ.eval` (execution-clarified live `o3-mini` follow-up; fail arm stays at 0.000, the intended execution leaf now passes, and the remaining live-judge delta is extra but hand-gradeable leaf credit rather than a missing targeted pass)
 - `logs-prod/2026-04-19T00-52-46-00-00_squidpy-evidence-policy-agent-probe_f2KkxWjVwbeyXCd8dZcwsY.eval` (successful post-fix live rerun after OpenAI balance was restored; removes the old `moran_geary_written` over-credit and is now the promoted live successor artifact)
+
+**April 21-26, 2026 GeneLab prompt/scaffold-hardening sequence:**
+- `logs-prod/2026-04-21T20-06-00-00-00_scireplicbench_BmPYCdd9VLr2rBYJMsoD2D.eval` (first real `genelab_benchmark` production attempt; still wandered into `v4/evaluation/*.json`, copied scratchpad content into `run.sh`, and failed precheck)
+- `logs-prod/2026-04-21T20-47-58-00-00_scireplicbench_EBqDy3e3CazvWNdmfS3Roz.eval` (task-path guidance fix; now starts from `A*_lomo` paths, but keeps the main workflow inside transient `python()` tool calls and still fails precheck)
+- `logs-prod/2026-04-21T21-19-53-00-00_scireplicbench_NBYyMZFQxnFgXhq574JLxv.eval` (saved-submission wording fix; writes `benchmark_analysis.py` and `run.sh`, but uses `echo "...\\n..."` for multi-line files, leaving broken one-line outputs and failing precheck)
+- `logs-prod/2026-04-21T23-19-58-00-00_scireplicbench_QAF72c7NR4GoXnh37fwfmw.eval` (newline-safe file-writing fix; first GeneLab run to pass precheck and grade all 55 leaves, but it still submits placeholder outputs without executing a meaningful workflow, so all judged leaves score 0)
+- `logs-prod/2026-04-21T23-53-16-00-00_scireplicbench_KjSseoSXfrAmYsPrrQJMjv.eval` (execute-before-submit wording fix; regresses to `echo "...\\n..."` file creation during debugging, so it falls back behind the precheck gate again)
+- `logs-prod/2026-04-22T06-12-20-00-00_scireplicbench_PwWmiCMEEMchQoJv4x5zky.eval` (first `workspace_text_file` rerun; interrupted by a tool bug when the new file helper rejected `/workspace/input/paper_bundle/paper.md` reads instead of returning a normal tool error)
+- `logs-prod/2026-04-22T06-56-22-00-00_scireplicbench_RFEwu74ZsfRSuMdt2mDTmD.eval` (fixed `workspace_text_file` rerun; uses durable reads/writes and passes precheck, but still assumes flat tissue-root files like `labels.csv` and submits only a manifest)
+- `logs-prod/2026-04-22T07-34-32-00-00_scireplicbench_8aAZafctZVmMmkuFwKRYnG.eval` (fold-layout guidance rerun; now targets real `fold_*` paths and durable files, but still dies on sample-ID/index misuse inside model fitting)
+- `logs-prod/2026-04-22T14-19-06-00-00_scireplicbench_3L2uDjJEF6FyrXXkYsLQ9Z.eval` (index-alignment guidance rerun; loads with `index_col=0`, aligns `X`/`y`, uses real classifiers, writes a real `lomo/summary.tsv`, and emits five output artifacts, but still hard-codes one demo fold and fills the rest of the required outputs with placeholders)
+- `logs-prod/2026-04-22T15-34-37-00-00_scireplicbench_2mqb75xQbNCAaqa3p4z4Cs.eval` (no-placeholder / multi-fold guidance rerun; explores real `fold_*` directories and switches to probability-based AUROC, but spends the budget on debug-heavy scripts and exits with only `/workspace/output/submission_manifest.json`)
+- `logs/2026-04-26T04-08-51-00-00_scireplicbench_j5nuaXbQta4PV9jUcEsWQX.eval` (v25 canonical-source hardening pilot; tool guards block thin source/launcher/manifest replacements, the final submission keeps the canonical starter workflow, emits nine output artifacts, passes precheck, and scores 0.217)
 
 Sanitized, path-redacted summaries of each run live under [../examples/](../examples/).
 
@@ -419,11 +440,11 @@ This is the first direct proof that the new v0.3 leaf-evidence layer removes the
 | squidpy_spatial | gpt-4o-mini frontier agent | production probe (v1.2 live judge `o3-mini`) | 1 eval / 2 samples | 0.085 | 0.068 | 0.088 | 0.095 |
 | squidpy_spatial | gpt-4o-mini frontier agent | production probe (v1.2 live judge `o3-mini`, calibrated) | 1 eval / 2 samples | 0.022 | 0.045 | 0.000 | 0.036 |
 | evidence_policy_probe | deterministic solver | smoke (v0.4 live probe) | 1 | 0.500 | 0.500 | 0.500 | 0.500 |
-| genelab_benchmark | — | — | 0 | pending | pending | pending | pending |
+| genelab_benchmark | gpt-4o-mini | production/pilot hardening ladder | 8 | 0.027 | 0.026 | 0.072 | 0.000 |
 
 ## Known limitations (current v1.2 state)
 
-1. **One production paper exercised.** Only `squidpy_spatial` has been run end-to-end on a real scientific image. `inspiration4_multiome` is now one step closer: its image builds and the public upstream analysis repository is staged locally, but the benchmark-ready AnnData or MuData cache is still missing. `genelab_benchmark` remains defined but unbuilt.
+1. **Only one external-anchor paper has a production-comparable blank-slate lane.** `squidpy_spatial` is the only paper with sealed generated references and repeated HPC unassisted runs that can currently support external-anchor model-performance claims. `inspiration4_multiome` is one step closer: its image builds and the public upstream analysis repository plus public OSDR outputs are staged locally, but the benchmark-ready AnnData or MuData reviewer object is still missing. `genelab_benchmark` is pilot-capable after the v25 canonical-source hardening run, but production claims remain blocked by hidden-reference completion and second-rater judge calibration.
 2. **Limited model matrix.** `gpt-4o-mini`, `claude-haiku-4-5`, and `claude-sonnet-4-6` have one production run each on `squidpy_spatial`, and the stabilized frontier-agent evidence-policy probe now covers the same three authoring models; `deepseek-v3` and higher-cost production lineups are still pending.
 3. **Single seed.** No variance estimate yet. Phase 4b calls for ≥ 3 seeds.
 4. **No self-consistency retry.** The n=3 self-consistency wrapper for disagreement-flagged leaves is implemented in `src/scireplicbench/judge.py` but not yet invoked by `rubric_tree_scorer`.
@@ -435,5 +456,6 @@ Ordered by priority for a credible artifact:
 
 1. Add a second human rater to the 20-leaf provisional panel in [judge_reliability.md](judge_reliability.md), using `judge_eval/review_packet_v0_1_false_positive_and_mZHU6eGr_blinded.json` or `.csv` so the reviewer sees the same examples without the provisional labels.
 2. Fold the fresh live successor `f2KkxWjV` into the human-review panel once the reviewer hold is lifted, so the reliability view no longer stops at the historical `mZHU6eGr` artifact.
-3. Finish benchmark-author data staging for `inspiration4_multiome` and run the first `gpt-4o-mini` production pass there; then build `genelab_benchmark` and repeat the same path.
-4. Add `deepseek-v3` to the cheap-model matrix and decide whether a higher-cost `gpt-4o` / `claude-sonnet` production pass is still warranted.
+3. Finish benchmark-author data staging for `inspiration4_multiome` by materializing or receiving the reviewer-ready AnnData or MuData object, then run the first `gpt-4o-mini` production pass there.
+4. For `genelab_benchmark`, keep the v25 canonical starter and tool protections, then seal hidden references so the current pilot-capable lane can graduate into production evaluation.
+5. Add `deepseek-v3` to the cheap-model matrix and decide whether a higher-cost `gpt-4o` / `claude-sonnet` production pass is still warranted.
