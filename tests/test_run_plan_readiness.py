@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 import unittest
 
+from scireplicbench.readiness import PROJECT_ROOT
 from scireplicbench.run_plan import build_phase4a_plan, build_phase4b_plan
 
 
@@ -32,3 +34,9 @@ class RunPlanReadinessTest(unittest.TestCase):
         command = genelab_entry.inspect_eval_command()
         self.assertIn("judge_self_consistency_n=3", command)
         self.assertFalse(genelab_entry.readiness_gate["run_allowed"])
+
+    def test_committed_phase4b_manifest_matches_builder_output(self) -> None:
+        manifest_path = PROJECT_ROOT / "configs" / "phase4b_production_plan.json"
+        committed_manifest = json.loads(manifest_path.read_text())
+        expected_manifest = [entry.to_dict() for entry in build_phase4b_plan()]
+        self.assertEqual(committed_manifest, expected_manifest)

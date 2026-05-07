@@ -100,6 +100,44 @@ class TaskConfigTest(unittest.TestCase):
         self.assertIn('sq.datasets.seqfish(path=paths["seqfish"])', script)
         self.assertIn('"workspace_path"', script)
 
+    def test_squidpy_image_feature_recipe_stays_aligned_across_surfaces(self) -> None:
+        with patch.dict(os.environ, {STARTER_MODE_ENV: "off"}, clear=False):
+            prompt = build_sample_input(load_task_records("squidpy_spatial")[0])
+        paper_dir = tasks.PROJECT_ROOT / "papers" / "squidpy_spatial"
+        shared_snippets = [
+            'layer_added="segmented_watershed"',
+            'features=["histogram", "segmentation", "summary", "texture"]',
+            '"histogram": {"channels": [0], "bins": 4}',
+            '"label_layer": "segmented_watershed"',
+            '"props": ["label", "area", "mean_intensity"]',
+            '"summary": {"channels": [0, 1, 2]}',
+            '"props": ["contrast", "homogeneity"]',
+            '"distances": [1]',
+            '"angles": [0]',
+        ]
+        surfaces = {
+            "output_contract": (paper_dir / "output_contract.md").read_text(),
+            "starter": (paper_dir / "starter" / "squidpy_spatial_workflow.py").read_text(),
+            "reference_generator": (
+                tasks.PROJECT_ROOT / "scripts" / "generate_squidpy_reference_outputs.py"
+            ).read_text(),
+        }
+        for surface_name, surface_text in surfaces.items():
+            with self.subTest(surface=surface_name):
+                for snippet in shared_snippets:
+                    self.assertIn(snippet, surface_text)
+
+        prompt_snippets = [
+            "sq.im.segment(image, layer='image', method='watershed', channel=0, layer_added='segmented_watershed', copy=False)",
+            "features=['histogram', 'segmentation', 'summary', 'texture']",
+            "'histogram': {'channels': [0], 'bins': 4}",
+            "'segmentation': {'label_layer': 'segmented_watershed', 'props': ['label', 'area', 'mean_intensity'], 'channels': [0]}",
+            "'summary': {'channels': [0, 1, 2]}",
+            "'texture': {'channels': [0], 'props': ['contrast', 'homogeneity'], 'distances': [1], 'angles': [0]}",
+        ]
+        for snippet in prompt_snippets:
+            self.assertIn(snippet, prompt)
+
     def test_paper_bundle_file_map_excludes_irrelevant_genelab_artifacts(self) -> None:
         file_map = _paper_bundle_file_map("genelab_benchmark")
         self.assertTrue(file_map)
