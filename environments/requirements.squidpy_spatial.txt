@@ -18,4 +18,5 @@ spatialdata==0.3.0
 squidpy==1.6.0
 statsmodels==0.14.2
 xarray==2025.1.2
+xarray-dataclasses==1.10.0
 zarr==2.18.3
