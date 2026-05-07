@@ -265,9 +265,14 @@ def _paper_production_blockers(paper_id: str) -> list[str]:
     if not hidden_reference_ok and hidden_reference_reason:
         blockers.append(hidden_reference_reason)
 
-    result_reference_ok, result_reference_reason = result_match_reference_ready(paper_id)
-    if not result_reference_ok and result_reference_reason:
-        blockers.append(result_reference_reason)
+    for ready_check in (
+        code_development_reference_ready,
+        execution_reference_ready,
+        result_match_reference_ready,
+    ):
+        reference_ok, reference_reason = ready_check(paper_id)
+        if not reference_ok and reference_reason:
+            blockers.append(reference_reason)
 
     if paper_id == "inspiration4_multiome":
         object_ready, object_reason = inspiration4_object_ready()
@@ -278,12 +283,6 @@ def _paper_production_blockers(paper_id: str) -> list[str]:
         hardened, hardening_reason = squidpy_runtime_hardening_ready()
         if not hardened and hardening_reason:
             blockers.append(hardening_reason)
-        execution_ok, execution_reason = execution_reference_ready(paper_id)
-        if not execution_ok and execution_reason:
-            blockers.append(execution_reason)
-        code_ok, code_reason = code_development_reference_ready(paper_id)
-        if not code_ok and code_reason:
-            blockers.append(code_reason)
 
     return blockers
 

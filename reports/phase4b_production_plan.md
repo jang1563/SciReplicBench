@@ -25,6 +25,6 @@
 
 | Phase | Paper | Lane | Reasons |
 |---|---|---|---|
-| phase4b_production | inspiration4_multiome | enablement | judge reliability panel still has only one human rater per item<br>hidden reference is still pending benchmark-author fill-in<br>result_match_reference.json is missing<br>benchmark-ready AnnData or MuData object is not staged under papers/inspiration4_multiome/data/cache |
+| phase4b_production | inspiration4_multiome | enablement | judge reliability panel still has only one human rater per item<br>hidden reference is still pending benchmark-author fill-in<br>code_development_reference.json is missing<br>execution_reference.json is missing<br>result_match_reference.json is missing<br>benchmark-ready AnnData or MuData object is not staged under papers/inspiration4_multiome/data/cache |
 | phase4b_production | squidpy_spatial | evaluation | judge reliability panel still has only one human rater per item |
-| phase4b_production | genelab_benchmark | evaluation | judge reliability panel still has only one human rater per item<br>hidden reference is still pending benchmark-author fill-in<br>result_match_reference.json is missing |
+| phase4b_production | genelab_benchmark | evaluation | judge reliability panel still has only one human rater per item<br>hidden reference is still pending benchmark-author fill-in<br>code_development_reference.json is missing<br>execution_reference.json is missing<br>result_match_reference.json is missing |

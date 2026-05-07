@@ -33,6 +33,8 @@
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
         "hidden reference is still pending benchmark-author fill-in",
+        "code_development_reference.json is missing",
+        "execution_reference.json is missing",
         "result_match_reference.json is missing",
         "benchmark-ready AnnData or MuData object is not staged under papers/inspiration4_multiome/data/cache"
       ],
@@ -111,6 +113,8 @@
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
         "hidden reference is still pending benchmark-author fill-in",
+        "code_development_reference.json is missing",
+        "execution_reference.json is missing",
         "result_match_reference.json is missing",
         "benchmark-ready AnnData or MuData object is not staged under papers/inspiration4_multiome/data/cache"
       ],
@@ -189,6 +193,8 @@
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
         "hidden reference is still pending benchmark-author fill-in",
+        "code_development_reference.json is missing",
+        "execution_reference.json is missing",
         "result_match_reference.json is missing",
         "benchmark-ready AnnData or MuData object is not staged under papers/inspiration4_multiome/data/cache"
       ],
@@ -267,6 +273,8 @@
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
         "hidden reference is still pending benchmark-author fill-in",
+        "code_development_reference.json is missing",
+        "execution_reference.json is missing",
         "result_match_reference.json is missing",
         "benchmark-ready AnnData or MuData object is not staged under papers/inspiration4_multiome/data/cache"
       ],
@@ -343,6 +351,8 @@
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
         "hidden reference is still pending benchmark-author fill-in",
+        "code_development_reference.json is missing",
+        "execution_reference.json is missing",
         "result_match_reference.json is missing",
         "benchmark-ready AnnData or MuData object is not staged under papers/inspiration4_multiome/data/cache"
       ],
@@ -419,6 +429,8 @@
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
         "hidden reference is still pending benchmark-author fill-in",
+        "code_development_reference.json is missing",
+        "execution_reference.json is missing",
         "result_match_reference.json is missing",
         "benchmark-ready AnnData or MuData object is not staged under papers/inspiration4_multiome/data/cache"
       ],
@@ -939,6 +951,8 @@
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
         "hidden reference is still pending benchmark-author fill-in",
+        "code_development_reference.json is missing",
+        "execution_reference.json is missing",
         "result_match_reference.json is missing"
       ],
       "advisories": []
@@ -1016,6 +1030,8 @@
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
         "hidden reference is still pending benchmark-author fill-in",
+        "code_development_reference.json is missing",
+        "execution_reference.json is missing",
         "result_match_reference.json is missing"
       ],
       "advisories": []
@@ -1093,6 +1109,8 @@
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
         "hidden reference is still pending benchmark-author fill-in",
+        "code_development_reference.json is missing",
+        "execution_reference.json is missing",
         "result_match_reference.json is missing"
       ],
       "advisories": []
@@ -1170,6 +1188,8 @@
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
         "hidden reference is still pending benchmark-author fill-in",
+        "code_development_reference.json is missing",
+        "execution_reference.json is missing",
         "result_match_reference.json is missing"
       ],
       "advisories": []
@@ -1245,6 +1265,8 @@
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
         "hidden reference is still pending benchmark-author fill-in",
+        "code_development_reference.json is missing",
+        "execution_reference.json is missing",
         "result_match_reference.json is missing"
       ],
       "advisories": []
@@ -1320,6 +1342,8 @@
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
         "hidden reference is still pending benchmark-author fill-in",
+        "code_development_reference.json is missing",
+        "execution_reference.json is missing",
         "result_match_reference.json is missing"
       ],
       "advisories": []

@@ -66,6 +66,18 @@ class PhaseGateTest(unittest.TestCase):
         self.assertEqual(pilot_gate.lane, "evaluation")
         self.assertFalse(production_gate.run_allowed)
         self.assertFalse(production_gate.production_ready)
+        self.assertIn(
+            "code_development_reference.json is missing",
+            production_gate.blocking_reasons,
+        )
+        self.assertIn(
+            "execution_reference.json is missing",
+            production_gate.blocking_reasons,
+        )
+        self.assertIn(
+            "result_match_reference.json is missing",
+            production_gate.blocking_reasons,
+        )
 
     def test_squidpy_runtime_hardening_guardrail_is_present(self) -> None:
         ready, reason = squidpy_runtime_hardening_ready()
