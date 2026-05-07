@@ -3,9 +3,13 @@ from __future__ import annotations
 import unittest
 
 from scireplicbench.readiness import (
+    code_development_reference_ready,
+    execution_reference_ready,
     hidden_reference_ready,
     phase_readiness_gate,
+    result_match_reference_ready,
     second_human_rater_ready,
+    squidpy_runtime_hardening_ready,
 )
 
 
@@ -14,12 +18,28 @@ class HiddenReferenceReadinessTest(unittest.TestCase):
         for paper_id in (
             "genelab_benchmark",
             "inspiration4_multiome",
-            "squidpy_spatial",
         ):
             ready, reason = hidden_reference_ready(paper_id)
             self.assertFalse(ready)
             self.assertIsNotNone(reason)
             self.assertIn("pending", reason or "")
+
+    def test_squidpy_deterministic_references_are_ready(self) -> None:
+        hidden_ready, hidden_reason = hidden_reference_ready("squidpy_spatial")
+        self.assertTrue(hidden_ready)
+        self.assertIsNone(hidden_reason)
+
+        result_ready, result_reason = result_match_reference_ready("squidpy_spatial")
+        self.assertTrue(result_ready)
+        self.assertIsNone(result_reason)
+
+        execution_ready, execution_reason = execution_reference_ready("squidpy_spatial")
+        self.assertTrue(execution_ready)
+        self.assertIsNone(execution_reason)
+
+        code_ready, code_reason = code_development_reference_ready("squidpy_spatial")
+        self.assertTrue(code_ready)
+        self.assertIsNone(code_reason)
 
 
 class JudgePanelReadinessTest(unittest.TestCase):
@@ -47,3 +67,14 @@ class PhaseGateTest(unittest.TestCase):
         self.assertFalse(production_gate.run_allowed)
         self.assertFalse(production_gate.production_ready)
 
+    def test_squidpy_runtime_hardening_guardrail_is_present(self) -> None:
+        ready, reason = squidpy_runtime_hardening_ready()
+        self.assertTrue(ready)
+        self.assertIsNone(reason)
+
+    def test_squidpy_production_still_blocked_by_single_rater_panel(self) -> None:
+        gate = phase_readiness_gate("squidpy_spatial", "phase4b_production")
+        self.assertFalse(gate.run_allowed)
+        self.assertTrue(
+            any("one human rater" in reason for reason in gate.blocking_reasons)
+        )

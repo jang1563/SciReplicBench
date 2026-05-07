@@ -59,7 +59,7 @@ def docker_engine_check(
     """Check that the Docker CLI can reach a healthy engine."""
 
     resolved = shutil.which(command_name)
-    if resolved is None:
+    if resolved is None and runner is subprocess.run:
         return ReadinessCheck(
             name="docker_engine",
             ok=False,

@@ -7,6 +7,7 @@
   "analysis_spec": {
     "dataset": "sq.datasets.visium_hne_adata()",
     "statistic": "geary",
+    "gene_selection": "Squidpy native default with genes=None, which uses adata.var['highly_variable'] when present; the benchmark-pinned Visium object contains 4000 highly variable genes.",
     "multiple_testing_correction": "Benjamini-Hochberg FDR",
     "required_outputs": [
       "full ranked Geary table",
@@ -15,8 +16,17 @@
     ]
   },
   "hidden_reference_generation": {
-    "status": "pending_benchmark_author_fill_in",
-    "note": "Populate the hidden-reference top-gene list and reference statistic values after an independent benchmark-author run."
+    "status": "generated",
+    "generated_at": "2026-04-28",
+    "generator": "scripts/generate_squidpy_reference_outputs.py",
+    "reference_artifacts": [
+      "reference_outputs/generated/squidpy_spatial_reference_summary.json",
+      "reference_outputs/generated/visium_hne_geary_ranked.tsv",
+      "reference_outputs/result_match_reference.json",
+      "reference_outputs/execution_reference.json",
+      "reference_outputs/code_development_reference.json"
+    ],
+    "note": "Held-out Geary top-gene list and all Squidpy result-match comparator artifacts were generated from the benchmark-pinned offline snapshots on Cayuga."
   },
   "grading_targets": {
     "rank_metric": "rank_biased_overlap",

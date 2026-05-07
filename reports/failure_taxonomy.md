@@ -83,7 +83,7 @@ This document names the concrete failure modes observed while running SciReplicB
   - `pkg_resources` was deprecated and is no longer always importable in Python 3.11 slim; some squidpy-adjacent code paths still try to import it. Sonnet spent its budget probing the Python path for a missing `pkg_resources`.
 - **Where seen:** `logs-prod/2026-04-14T02-58-39-00-00_scireplicbench_Kfjef4zbDpVAoWmQS7fYDB.eval` (zarr v3), `logs-prod/2026-04-14T03-05-54-00-00_scireplicbench_JeRrV6juZ4nxSBKtAVuK3w.eval` (pkg_resources).
 - **Why it matters:** The benchmark cannot separate "agent is bad at Squidpy" from "agent was defeated by a Docker-side environment wrinkle." Fixing the environment is a prerequisite to drawing strong capability claims from the score.
-- **Mitigation:** pin `zarr==2.18.3` and `numcodecs<0.16` in `requirements.squidpy_spatial.txt` (already done for zarr; numcodecs pin is pending), pre-install `setuptools` so `pkg_resources` is importable without a shim, and add a container-health smoke that runs `python -c "import squidpy; import scanpy; import spatialdata"` as part of the build.
+- **Mitigation:** pin `zarr==2.18.3` and `numcodecs==0.15.1` in `requirements.squidpy_spatial.txt`, pin `setuptools==80.8.0` so `pkg_resources` is importable without a shim, and run `scripts/check_squidpy_scientific_stack.py` as both a container-health smoke and a Cayuga cache/load/analysis smoke.
 
 ### 7. Live-judge calibration drift on the evidence-policy probe
 
@@ -103,40 +103,12 @@ This document names the concrete failure modes observed while running SciReplicB
 - **Likely mitigation path:** once the reviewer hold is lifted, confirm the provisional 20-leaf panel with a second rater and then decide whether the fresh live successor `f2KkxWjV` should replace `mZHU6eGr` inside that panel. A blinded JSON/CSV packet for the current panel exists under `judge_eval/review_packet_v0_1_false_positive_and_mZHU6eGr_blinded.*`.
 - **Current status:** the exact-leaf guardrail prompt plus one retry for malformed outputs removed the largest source of drift on `o3-mini`, and the execution-clarified follow-up removed the earlier missing-targeted-leaf issue. The current scorer already contains a narrow deterministic fix for the one historically disputed execution-statistics pattern, and the fresh live rerun `f2KkxWjV` no longer grants that historical `moran_geary_written` leaf at all. The earlier quota-blocked attempts (`fa5G3aTA` and `g7eC3Ph9`) remain useful only as failure-history artifacts, and `scripts/run_evidence_policy_probe.py` now fails cleanly on that incomplete-log shape instead of cascading into a secondary `_write_example` error.
 
-### 8. GeneLab prompt-hardening oscillation: toy executed artifact vs. debug-only scaffold
-
-- **What it is:** Once the GeneLab package stopped failing on path layout, newline corruption, and sample-ID alignment, the same model began oscillating between two different nonzero-effort but still benchmark-insufficient behaviors:
-  - a real executed artifact that proves the model can load one fold correctly and write a real AUROC table, but still hard-codes a single demo fold and fills the rest of the required outputs with placeholders;
-  - a stricter no-placeholder rerun that discovers the real `fold_*` directories and uses probability-based AUROC, but burns the whole budget on exploratory scripts and exits with only a manifest.
-- **Where seen:** `logs-prod/2026-04-22T14-19-06-00-00_scireplicbench_3L2uDjJEF6FyrXXkYsLQ9Z.eval` and `logs-prod/2026-04-22T15-34-37-00-00_scireplicbench_2mqb75xQbNCAaqa3p4z4Cs.eval`.
-- **Why it matters:** This is a more mature failure mode than the earlier GeneLab misses. The agent is no longer blocked by public data, Docker image setup, or CSV-index confusion. It can now write saved Python, align `X`/`y`, and run real classifiers. The remaining problem is that the benchmark contract still relies too much on prompt interpretation instead of giving the agent a scaffold that naturally produces benchmark-shaped outputs.
-- **Observed shape in `3L2uDjJE`:**
-  - `precheck.ok = true`
-  - `leaves_graded = 55`
-  - `output_artifact_count = 5`
-  - non-trivial submission file: `/workspace/submission/analysis.py`
-  - real `lomo/summary.tsv` written with AUROC rows
-  - but `transfer/cross_tissue.tsv`, `negative_controls/summary.tsv`, and `interpretability/top_features.tsv` are still placeholder text files
-  - workflow remains hard-coded to one example fold (`A2_gastrocnemius_lomo/fold_RR-1_test`)
-- **Observed shape in `2mqb75xQ`:**
-  - `precheck.ok = true`
-  - `leaves_graded = 55`
-  - `output_artifact_count = 1` (`/workspace/output/submission_manifest.json` only)
-  - non-trivial submission files: `/workspace/submission/check_folds.py`, `check_labels_metadata.py`, `load_and_process.py`
-  - code now uses `predict_proba` and iterates `A*_lomo/fold_*`
-  - but `run.sh` still only launches exploration code and never writes the required benchmark TSV outputs
-- **Likely mitigation path:** move from prompt-hardening to scaffold-hardening. For this paper specifically, the next leverage point is a task-side starter that:
-  - discovers available folds,
-  - defines canonical TSV schemas for `lomo`, `cross_tissue`, `negative_controls`, and `interpretability`,
-  - writes honest status rows when a branch is partial,
-  - and makes it easier to extend one working fold into a benchmark-shaped multi-fold artifact without spending the whole message budget on repo archaeology.
-
 ## Anticipated but not yet observed
 
 Modes the design expects but that no log evidence yet supports:
 
 - **Method-equivalence drift.** e.g., agent uses `scanpy.pp.combat` where the rubric expects `ComBat-seq` on counts. Will only show up once a stronger agent produces real analyses.
 - **Self-grading-bias artifact.** If the Squidpy-anchored judge grades the authored papers leniently, we expect a systematic gap between Squidpy and authored-paper judge-human agreement. The file `judge_eval/human_grades.json` now contains a provisional 20-leaf panel spanning both the archived false-positive case and the stable live-judge case, and blinded second-rater exports now exist under `judge_eval/review_packet_v0_1_false_positive_and_mZHU6eGr_blinded.json` and `.csv`, but that second human panel still needs to be filled before the bias can be quantified robustly.
-- **Evaluation leakage across benchmark splits.** For `genelab_benchmark` specifically, an agent could accidentally leak mission-level information across LOMO folds. The latest April 22 runs now read real `fold_*` directories and one (`3L2uDjJE`) executes a single fold correctly, but we still do not have a promotable multi-fold LOMO artifact whose split integrity can be judged confidently.
+- **Evaluation leakage across benchmark splits.** For `genelab_benchmark` specifically, an agent could accidentally leak mission-level information across LOMO folds. The rubric flags this, but no production run has executed it yet.
 
 This file is a living document: expand each entry with its real signal as more runs land.

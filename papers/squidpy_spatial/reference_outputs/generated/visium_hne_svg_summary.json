@@ -1,0 +1,6 @@
+{
+  "method": "sq.gr.spatial_autocorr(mode='moran', corr_method='fdr_bh')",
+  "fdr_column": "pval_norm_fdr_bh",
+  "fdr_threshold": 0.05,
+  "significant_gene_count": 3515
+}

@@ -8,6 +8,8 @@ import re
 from pathlib import PurePosixPath
 from typing import Literal
 
+from .workspace import workspace_path, workspace_root
+
 try:
     from inspect_ai.tool import tool
     from inspect_ai.util import sandbox
@@ -30,45 +32,48 @@ except ModuleNotFoundError as exc:  # pragma: no cover - local fallback for impo
         ) from _INSPECT_IMPORT_ERROR
 
 
-DEFAULT_SCRATCHPAD_PATH = "/workspace/scratchpad.md"
+_WORKSPACE_ROOT = workspace_root()
+DEFAULT_SCRATCHPAD_PATH = workspace_path("scratchpad.md")
 SCRATCHPAD_MAX_CHARS = 24_000
 WORKSPACE_TEXT_ALLOWED_ROOTS = (
-    "/workspace/submission",
-    "/workspace/output",
-    "/workspace/logs",
+    workspace_path("submission"),
+    workspace_path("output"),
+    workspace_path("logs"),
 )
 WORKSPACE_TEXT_READ_ONLY_ROOTS = (
-    "/workspace/input",
+    workspace_path("input"),
 )
 WORKSPACE_TEXT_MAX_CHARS = 200_000
 WORKSPACE_TEXT_READ_MAX_CHARS = 12_000
-PROTECTED_STARTER_LAUNCHER = "/workspace/input/paper_bundle/starter/run.sh"
-PROTECTED_SUBMISSION_LAUNCHER = "/workspace/submission/run.sh"
-PROTECTED_STARTER_MAIN_ANALYSIS = "/workspace/input/paper_bundle/starter/main_analysis.py"
-PROTECTED_SUBMISSION_MAIN_ANALYSIS = "/workspace/submission/main_analysis.py"
-PROTECTED_SUBMISSION_SCAFFOLD = "/workspace/submission/genelab_scaffold.py"
-PROTECTED_SUBMISSION_MANIFEST = "/workspace/output/submission_manifest.json"
+PROTECTED_STARTER_LAUNCHER = workspace_path("input", "paper_bundle", "starter", "run.sh")
+PROTECTED_SUBMISSION_LAUNCHER = workspace_path("submission", "run.sh")
+PROTECTED_STARTER_MAIN_ANALYSIS = workspace_path(
+    "input", "paper_bundle", "starter", "main_analysis.py"
+)
+PROTECTED_SUBMISSION_MAIN_ANALYSIS = workspace_path("submission", "main_analysis.py")
+PROTECTED_SUBMISSION_SCAFFOLD = workspace_path("submission", "genelab_scaffold.py")
+PROTECTED_SUBMISSION_MANIFEST = workspace_path("output", "submission_manifest.json")
 PROTECTED_GENELAB_OUTPUTS = (
-    "/workspace/output/agent/lomo/summary.tsv",
-    "/workspace/output/agent/transfer/cross_tissue.tsv",
-    "/workspace/output/agent/negative_controls/summary.tsv",
-    "/workspace/output/agent/interpretability/top_features.tsv",
+    workspace_path("output", "agent", "lomo", "summary.tsv"),
+    workspace_path("output", "agent", "transfer", "cross_tissue.tsv"),
+    workspace_path("output", "agent", "negative_controls", "summary.tsv"),
+    workspace_path("output", "agent", "interpretability", "top_features.tsv"),
 )
 PROTECTED_LAUNCHER_MESSAGE = (
-    "GeneLab seeded launcher protection: /workspace/submission/run.sh is "
+    f"Seeded launcher protection: {PROTECTED_SUBMISSION_LAUNCHER} is "
     "managed by the benchmark starter. Leave it intact and put substantive "
-    "edits in /workspace/submission/main_analysis.py or other source files. "
+    f"edits in {PROTECTED_SUBMISSION_MAIN_ANALYSIS} or other source files. "
     "The launcher already checks required artifacts, applies timeouts, and "
     "falls back to the pristine staged starter."
 )
 PROTECTED_GENELAB_OUTPUT_MESSAGE = (
     "GeneLab output artifact protection: this required TSV already contains "
     "a rich benchmark-style table. Do not replace it with a thinner placeholder; "
-    "rerun /workspace/submission/run.sh or write a full structured TSV with "
+    f"rerun {PROTECTED_SUBMISSION_LAUNCHER} or write a full structured TSV with "
     "comparable columns and rows."
 )
 PROTECTED_GENELAB_SOURCE_MESSAGE = (
-    "GeneLab source protection: /workspace/submission/main_analysis.py already "
+    f"GeneLab source protection: {PROTECTED_SUBMISSION_MAIN_ANALYSIS} already "
     "contains the seeded benchmark-style analysis. Do not replace it with a "
     "thin partial script; keep the LOMO, transfer, negative-control, "
     "interpretability, go/no-go, foundation-model staging, and manifest outputs. "
@@ -78,18 +83,26 @@ PROTECTED_GENELAB_SOURCE_MESSAGE = (
     "canonical workflow."
 )
 PROTECTED_GENELAB_MANIFEST_MESSAGE = (
-    "GeneLab manifest protection: /workspace/output/submission_manifest.json "
-    "already records the seeded reviewer-path run with commands, inputs, "
-    "artifacts, detected tissues, folds, models, and summary counts. Do not "
-    "replace it with a thinner prose summary; rerun /workspace/submission/run.sh "
-    "or preserve the full structured manifest fields."
+    f"GeneLab manifest protection: {PROTECTED_SUBMISSION_MANIFEST} already "
+    "records the seeded reviewer-path run with commands, inputs, artifacts, "
+    "detected tissues, folds, models, and summary counts. Do not replace it "
+    f"with a thinner prose summary; rerun {PROTECTED_SUBMISSION_LAUNCHER} or "
+    "preserve the full structured manifest fields."
 )
 PROTECTED_GENELAB_SIDECAR_MESSAGE = (
     "GeneLab post-success sidecar protection: the canonical seeded workflow "
     "already produced the structured starter artifacts and manifest. Do not "
-    "add an unhooked alternate analysis driver under /workspace/submission; "
+    f"add an unhooked alternate analysis driver under {workspace_path('submission')}; "
     "inspect the generated TSVs and submit, or make a complete canonical "
     "workflow replacement that preserves the full artifact set."
+)
+PROTECTED_SQUIDPY_SOURCE_MESSAGE = (
+    f"Squidpy source protection: {PROTECTED_SUBMISSION_MAIN_ANALYSIS} already "
+    "contains the seeded offline reviewer-path workflow. Do not replace it with "
+    "a thin partial script; keep the dataset manifest, graph metrics, "
+    "neighborhood, autocorrelation, spatial-statistics, image-feature, "
+    "ligand-receptor, and submission-manifest outputs. Add helper files or use "
+    "workspace_text_file for a complete replacement that preserves those stages."
 )
 _GENELAB_POST_SUCCESS_SIDECAR_NAMES = (
     "run_benchmark.py",
@@ -125,6 +138,29 @@ _GENELAB_SOURCE_RICH_MARKERS = (
     "feature_rank",
     "Geneformer",
 )
+_SQUIDPY_SOURCE_REQUIRED_OUTPUT_MARKERS = (
+    "dataset_manifest.json",
+    "spatial_graph_metrics.json",
+    "neighborhood/nhood_enrichment_ranked.tsv",
+    "autocorrelation/moran_ranked.tsv",
+    "autocorrelation/geary_ranked.tsv",
+    "spatial_stats/ripley_curves.tsv",
+    "image_features/feature_matrix.tsv",
+    "image_features/feature_summary.json",
+    "interactions/ligrec_ranked.tsv",
+    "interactions/ligrec_summary.json",
+    "submission_manifest.json",
+)
+_SQUIDPY_SOURCE_RICH_MARKERS = (
+    "generate_references",
+    "squidpy_spatial_workflow",
+    "SQUIDPY_OUTPUT_ROOT",
+    "SQUIDPY_DATASET_MANIFEST",
+    "SQUIDPY_LIGREC_INTERACTIONS",
+    "starter_profile",
+    "squidpy_offline_reviewer_path",
+    "_copy_generated",
+)
 _PROTECTED_LAUNCHER_WRITE_RE = re.compile(
     r"(?:^|[^<])>{1,2}\s*(?:--\s*)?['\"]?"
     + re.escape(PROTECTED_SUBMISSION_LAUNCHER)
@@ -156,7 +192,9 @@ _PROTECTED_MANIFEST_MUTATION_RE = re.compile(
     + re.escape(PROTECTED_SUBMISSION_MANIFEST)
 )
 _SUBMISSION_PYTHON_PATH_RE = re.compile(
-    r"['\"]?(?P<path>/workspace/submission/[A-Za-z0-9_./-]+\.py)['\"]?"
+    r"['\"]?(?P<path>"
+    + re.escape(workspace_path("submission"))
+    + r"/[A-Za-z0-9_./-]+\.py)['\"]?"
 )
 _STARTER_MAIN_ANALYSIS_COPY_RE = re.compile(
     r"^\s*cp(?:\s+-[^\s]+)*\s+['\"]?"
@@ -204,7 +242,8 @@ def _is_protected_genelab_manifest_path(path: str) -> bool:
 
 
 def _is_submission_python_path(path: str) -> bool:
-    return path.startswith("/workspace/submission/") and PurePosixPath(path).suffix == ".py"
+    submission_root = workspace_path("submission")
+    return path.startswith(f"{submission_root}/") and PurePosixPath(path).suffix == ".py"
 
 
 def _is_protected_genelab_sidecar_path(path: str) -> bool:
@@ -269,10 +308,10 @@ def _looks_like_rich_genelab_manifest(contents: str) -> bool:
 
     artifact_text = "\n".join(str(artifact) for artifact in artifacts)
     required_artifacts = (
-        "/workspace/output/agent/lomo/summary.tsv",
-        "/workspace/output/agent/transfer/cross_tissue.tsv",
-        "/workspace/output/agent/negative_controls/summary.tsv",
-        "/workspace/output/agent/interpretability/top_features.tsv",
+        workspace_path("output", "agent", "lomo", "summary.tsv"),
+        workspace_path("output", "agent", "transfer", "cross_tissue.tsv"),
+        workspace_path("output", "agent", "negative_controls", "summary.tsv"),
+        workspace_path("output", "agent", "interpretability", "top_features.tsv"),
     )
     if not all(artifact in artifact_text for artifact in required_artifacts):
         return False
@@ -310,7 +349,7 @@ def _looks_like_genelab_alternate_sidecar_source(contents: str) -> bool:
     output_hits = sum(
         1
         for marker in (
-            "/workspace/output/agent",
+            workspace_path("output", "agent"),
             "lomo/summary.tsv",
             "transfer/cross_tissue.tsv",
             "negative_controls/summary.tsv",
@@ -320,6 +359,17 @@ def _looks_like_genelab_alternate_sidecar_source(contents: str) -> bool:
         if marker in text
     )
     return marker_hits >= 4 and output_hits >= 1
+
+
+def _looks_like_rich_squidpy_source(contents: str) -> bool:
+    text = str(contents)
+    nonempty_lines = [line for line in text.splitlines() if line.strip()]
+    if len(nonempty_lines) < 80:
+        return False
+    if not all(marker in text for marker in _SQUIDPY_SOURCE_REQUIRED_OUTPUT_MARKERS):
+        return False
+    marker_hits = sum(1 for marker in _SQUIDPY_SOURCE_RICH_MARKERS if marker in text)
+    return marker_hits >= 5
 
 
 async def _would_downgrade_protected_genelab_output(
@@ -349,21 +399,20 @@ async def _would_downgrade_protected_genelab_source(
 ) -> bool:
     if not _is_protected_genelab_source_path(path):
         return False
-    starter_source: str | None = None
-    try:
-        starter_source = str(
-            await env.read_file(PROTECTED_STARTER_MAIN_ANALYSIS)  # type: ignore[attr-defined]
-        )
-    except FileNotFoundError:
-        starter_source = None
-    except Exception:
-        starter_source = None
     try:
         existing = str(await env.read_file(path))  # type: ignore[attr-defined]
     except FileNotFoundError:
         existing = ""
     except Exception:
         existing = ""
+    try:
+        starter_source = str(
+            await env.read_file(PROTECTED_STARTER_MAIN_ANALYSIS)  # type: ignore[attr-defined]
+        )
+    except FileNotFoundError:
+        starter_source = ""
+    except Exception:
+        starter_source = ""
 
     baseline_candidates = [
         candidate for candidate in (existing, starter_source) if candidate
@@ -422,6 +471,26 @@ async def _would_create_protected_genelab_sidecar(
     ) or _looks_like_genelab_alternate_sidecar_source(replacement)
 
 
+async def _would_downgrade_protected_squidpy_source(
+    env: object,
+    path: str,
+    replacement: str,
+) -> bool:
+    if not _is_protected_genelab_source_path(path):
+        return False
+    if not await _starter_main_analysis_is_available(env):
+        return False
+    try:
+        existing = await env.read_file(path)  # type: ignore[attr-defined]
+    except FileNotFoundError:
+        return False
+    except Exception:
+        return False
+    return _looks_like_rich_squidpy_source(
+        str(existing)
+    ) and not _looks_like_rich_squidpy_source(replacement)
+
+
 async def _would_append_to_protected_genelab_source(env: object, path: str) -> bool:
     if not _is_protected_genelab_source_path(path):
         return False
@@ -441,6 +510,44 @@ async def _would_append_to_protected_genelab_source(env: object, path: str) -> b
     except Exception:
         pass
     return any(_looks_like_rich_genelab_source(candidate) for candidate in baseline_candidates)
+
+
+async def _would_append_to_protected_squidpy_source(env: object, path: str) -> bool:
+    if not _is_protected_genelab_source_path(path):
+        return False
+    if not await _starter_main_analysis_is_available(env):
+        return False
+    try:
+        existing = await env.read_file(path)  # type: ignore[attr-defined]
+    except FileNotFoundError:
+        return False
+    except Exception:
+        return False
+    return _looks_like_rich_squidpy_source(str(existing))
+
+
+async def _submission_main_analysis_looks_like_rich_genelab(env: object) -> bool:
+    if not await _starter_main_analysis_is_available(env):
+        return False
+    try:
+        existing = await env.read_file(PROTECTED_SUBMISSION_MAIN_ANALYSIS)  # type: ignore[attr-defined]
+    except FileNotFoundError:
+        return False
+    except Exception:
+        return False
+    return _looks_like_rich_genelab_source(str(existing))
+
+
+async def _submission_main_analysis_looks_like_rich_squidpy(env: object) -> bool:
+    if not await _starter_main_analysis_is_available(env):
+        return False
+    try:
+        existing = await env.read_file(PROTECTED_SUBMISSION_MAIN_ANALYSIS)  # type: ignore[attr-defined]
+    except FileNotFoundError:
+        return False
+    except Exception:
+        return False
+    return _looks_like_rich_squidpy_source(str(existing))
 
 
 def _bash_command_writes_protected_launcher(cmd: str) -> bool:
@@ -527,7 +634,7 @@ def _normalize_workspace_text_path(
     normalized = PurePosixPath(posixpath.normpath(candidate)).as_posix()
     if not normalized.startswith("/"):
         raise ValueError(
-            "workspace_text_file paths must be absolute paths under /workspace."
+            f"workspace_text_file paths must be absolute paths under {_WORKSPACE_ROOT}."
         )
 
     allowed_roots = WORKSPACE_TEXT_ALLOWED_ROOTS
@@ -566,7 +673,7 @@ def guarded_bash(
     """Bash shell command execution with seeded launcher protection.
 
     Execute bash commands in the sandbox. For seeded GeneLab tasks, common
-    attempts to overwrite `/workspace/submission/run.sh` are rejected so the
+    attempts to overwrite the seeded submission launcher are rejected so the
     starter launcher can keep its artifact checks, timeout, and fallback.
 
     Args:
@@ -591,8 +698,14 @@ def guarded_bash(
         env = sandbox(sandbox_name)
         if _bash_command_writes_protected_launcher(cmd) and await _starter_launcher_is_available(env):
             return f"bash error: {PROTECTED_LAUNCHER_MESSAGE}"
-        if _bash_command_writes_protected_source(cmd) and await _starter_main_analysis_is_available(env):
+        if _bash_command_writes_protected_source(
+            cmd
+        ) and await _submission_main_analysis_looks_like_rich_genelab(env):
             return f"bash error: {PROTECTED_GENELAB_SOURCE_MESSAGE}"
+        if _bash_command_writes_protected_source(
+            cmd
+        ) and await _submission_main_analysis_looks_like_rich_squidpy(env):
+            return f"bash error: {PROTECTED_SQUIDPY_SOURCE_MESSAGE}"
         if (
             _bash_command_writes_protected_manifest(cmd)
             and await _protected_genelab_manifest_is_rich(env)
@@ -679,7 +792,7 @@ def workspace_text_file():
         max_chars: int = WORKSPACE_TEXT_READ_MAX_CHARS,
     ) -> str:
         """
-        Read or update a text file under /workspace/submission, /workspace/output, or /workspace/logs.
+        Read or update a text file under the configured workspace's submission, output, or logs roots.
 
         This tool is designed for exact multi-line writes of source code,
         launcher scripts, README files, manifests, and small text outputs.
@@ -726,6 +839,10 @@ def workspace_text_file():
             env, resolved
         ):
             return f"workspace_text_file error: {PROTECTED_GENELAB_SOURCE_MESSAGE}"
+        if action == "append" and await _would_append_to_protected_squidpy_source(
+            env, resolved
+        ):
+            return f"workspace_text_file error: {PROTECTED_SQUIDPY_SOURCE_MESSAGE}"
 
         replacement = content
         if action == "append":
@@ -737,6 +854,9 @@ def workspace_text_file():
 
         if await _would_downgrade_protected_genelab_source(env, resolved, replacement):
             return f"workspace_text_file error: {PROTECTED_GENELAB_SOURCE_MESSAGE}"
+
+        if await _would_downgrade_protected_squidpy_source(env, resolved, replacement):
+            return f"workspace_text_file error: {PROTECTED_SQUIDPY_SOURCE_MESSAGE}"
 
         if await _would_downgrade_protected_genelab_manifest(env, resolved, replacement):
             return f"workspace_text_file error: {PROTECTED_GENELAB_MANIFEST_MESSAGE}"
@@ -785,8 +905,10 @@ __all__ = [
     "DEFAULT_SCRATCHPAD_PATH",
     "PROTECTED_GENELAB_OUTPUTS",
     "PROTECTED_GENELAB_MANIFEST_MESSAGE",
+    "PROTECTED_GENELAB_OUTPUT_MESSAGE",
     "PROTECTED_GENELAB_SIDECAR_MESSAGE",
     "PROTECTED_GENELAB_SOURCE_MESSAGE",
+    "PROTECTED_SQUIDPY_SOURCE_MESSAGE",
     "PROTECTED_STARTER_LAUNCHER",
     "PROTECTED_STARTER_MAIN_ANALYSIS",
     "PROTECTED_SUBMISSION_LAUNCHER",
@@ -794,9 +916,9 @@ __all__ = [
     "PROTECTED_SUBMISSION_MANIFEST",
     "PROTECTED_SUBMISSION_SCAFFOLD",
     "WORKSPACE_TEXT_ALLOWED_ROOTS",
+    "_bash_command_writes_or_runs_protected_sidecar",
     "_bash_command_writes_protected_manifest",
     "_bash_command_writes_protected_source",
-    "_bash_command_writes_or_runs_protected_sidecar",
     "_is_protected_genelab_output_path",
     "_is_protected_genelab_manifest_path",
     "_is_protected_genelab_sidecar_path",
@@ -804,11 +926,16 @@ __all__ = [
     "_looks_like_genelab_alternate_sidecar_source",
     "_looks_like_rich_genelab_manifest",
     "_looks_like_rich_genelab_source",
+    "_looks_like_rich_squidpy_source",
     "_looks_like_rich_genelab_tsv",
+    "_submission_main_analysis_looks_like_rich_genelab",
+    "_submission_main_analysis_looks_like_rich_squidpy",
     "_would_append_to_protected_genelab_source",
+    "_would_append_to_protected_squidpy_source",
     "_would_create_protected_genelab_sidecar",
     "_would_downgrade_protected_genelab_manifest",
     "_would_downgrade_protected_genelab_source",
+    "_would_downgrade_protected_squidpy_source",
     "guarded_bash",
     "workspace_text_file",
     "scratchpad",

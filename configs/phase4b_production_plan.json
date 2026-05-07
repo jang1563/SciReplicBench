@@ -488,12 +488,9 @@
       "production_ready": false,
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
-        "hidden reference is still pending benchmark-author fill-in",
-        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
+        "hidden reference is still pending benchmark-author fill-in"
       ],
-      "advisories": [
-        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
-      ]
+      "advisories": []
     },
     "judge_self_consistency_n": 3,
     "judge_self_consistency_min_confidence": 0.6,
@@ -567,12 +564,9 @@
       "production_ready": false,
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
-        "hidden reference is still pending benchmark-author fill-in",
-        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
+        "hidden reference is still pending benchmark-author fill-in"
       ],
-      "advisories": [
-        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
-      ]
+      "advisories": []
     },
     "judge_self_consistency_n": 3,
     "judge_self_consistency_min_confidence": 0.6,
@@ -646,12 +640,9 @@
       "production_ready": false,
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
-        "hidden reference is still pending benchmark-author fill-in",
-        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
+        "hidden reference is still pending benchmark-author fill-in"
       ],
-      "advisories": [
-        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
-      ]
+      "advisories": []
     },
     "judge_self_consistency_n": 3,
     "judge_self_consistency_min_confidence": 0.6,
@@ -725,12 +716,9 @@
       "production_ready": false,
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
-        "hidden reference is still pending benchmark-author fill-in",
-        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
+        "hidden reference is still pending benchmark-author fill-in"
       ],
-      "advisories": [
-        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
-      ]
+      "advisories": []
     },
     "judge_self_consistency_n": 3,
     "judge_self_consistency_min_confidence": 0.6,
@@ -802,12 +790,9 @@
       "production_ready": false,
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
-        "hidden reference is still pending benchmark-author fill-in",
-        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
+        "hidden reference is still pending benchmark-author fill-in"
       ],
-      "advisories": [
-        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
-      ]
+      "advisories": []
     },
     "judge_self_consistency_n": 3,
     "judge_self_consistency_min_confidence": 0.6,
@@ -879,12 +864,9 @@
       "production_ready": false,
       "blocking_reasons": [
         "judge reliability panel still has only one human rater per item",
-        "hidden reference is still pending benchmark-author fill-in",
-        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
+        "hidden reference is still pending benchmark-author fill-in"
       ],
-      "advisories": [
-        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
-      ]
+      "advisories": []
     },
     "judge_self_consistency_n": 3,
     "judge_self_consistency_min_confidence": 0.6,

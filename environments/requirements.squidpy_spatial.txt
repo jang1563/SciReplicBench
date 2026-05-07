@@ -3,6 +3,8 @@ anndata==0.10.8
 dask==2024.11.2
 matplotlib==3.8.4
 networkx==3.3
+# zarr<3 imports public blosc helpers that numcodecs removed in 0.16.
+numcodecs==0.15.1
 numpy==1.26.4
 pandas==2.2.2
 PyYAML==6.0.1
@@ -10,6 +12,8 @@ scanpy==1.10.1
 scikit-learn==1.5.0
 scipy==1.13.1
 seaborn==0.13.2
+# Squidpy-adjacent imports still touch pkg_resources; setuptools 82 removed it.
+setuptools==80.8.0
 spatialdata==0.3.0
 squidpy==1.6.0
 statsmodels==0.14.2

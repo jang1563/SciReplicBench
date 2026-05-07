@@ -56,8 +56,15 @@ submissions/
 # Data and model artifacts (large, regenerated per run)
 papers/*/data/*
 !papers/*/data/prepare_data.sh
+!papers/*/data/*_interactions.tsv
 papers/*/reference_outputs/*
 !papers/*/reference_outputs/.gitkeep
+!papers/*/reference_outputs/result_match_reference.json
+!papers/*/reference_outputs/execution_reference.json
+!papers/*/reference_outputs/code_development_reference.json
+!papers/*/reference_outputs/generated/
+!papers/*/reference_outputs/generated/*.json
+!papers/*/reference_outputs/generated/*.tsv
 *.h5ad
 *.h5
 *.loom

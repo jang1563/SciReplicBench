@@ -12,6 +12,7 @@ from scireplicbench.judge import LeafJudgement
 from scireplicbench.scorers import (
     _artifact_presence_precheck,
     _has_nontrivial_body,
+    _has_nontrivial_workflow_source,
 )
 
 
@@ -141,6 +142,14 @@ class NontrivialBodyTest(unittest.TestCase):
         # unparseable; treat as non-executable
         self.assertFalse(_has_nontrivial_body("def f(:\n    pass\n"))
 
+    def test_nontrivial_shell_launcher_counts_as_workflow_source(self) -> None:
+        source = "#!/usr/bin/env bash\nset -euo pipefail\npython /workspace/submission/main.py\n"
+        self.assertTrue(_has_nontrivial_workflow_source("/workspace/submission/run.sh", source))
+
+    def test_placeholder_shell_launcher_is_not_workflow_source(self) -> None:
+        source = "#!/usr/bin/env bash\nset -euo pipefail\necho todo\ntouch out.txt\n"
+        self.assertFalse(_has_nontrivial_workflow_source("/workspace/submission/run.sh", source))
+
 
 @dataclass
 class _FakeExecResult:
@@ -202,8 +211,46 @@ class PrecheckFunctionTest(unittest.TestCase):
             result = _run(_artifact_presence_precheck())
         self.assertTrue(result["ok"])
         self.assertEqual(result["nontrivial_py_files"], 1)
+        self.assertEqual(result["nontrivial_source_files"], 1)
         self.assertEqual(result["nontrivial_py_examples"], ["/workspace/submission/analysis.py"])
+        self.assertEqual(result["nontrivial_source_examples"], ["/workspace/submission/analysis.py"])
         self.assertIsNone(result["reason"])
+
+    def test_precheck_can_require_output_artifact_for_result_match_tasks(self) -> None:
+        fake = _FakeSandbox(
+            py_paths=["/workspace/submission/analysis.py"],
+            files={
+                "/workspace/submission/analysis.py": (
+                    "def analyse(x):\n    y = x * 2\n    return y\n"
+                )
+            },
+            output_paths=[],
+        )
+        with self._patched(fake):
+            result = _run(_artifact_presence_precheck(require_output_artifact=True))
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["nontrivial_source_files"], 1)
+        self.assertEqual(result["output_artifact_count"], 0)
+        self.assertTrue(result["requires_output_artifact"])
+        self.assertIn("no non-document output artifacts", result["reason"])
+
+    def test_precheck_accepts_non_python_workflow_source(self) -> None:
+        fake = _FakeSandbox(
+            py_paths=["/workspace/submission/run.sh"],
+            files={
+                "/workspace/submission/run.sh": (
+                    "#!/usr/bin/env bash\n"
+                    "set -euo pipefail\n"
+                    "Rscript /workspace/submission/analysis.R\n"
+                )
+            },
+        )
+        with self._patched(fake):
+            result = _run(_artifact_presence_precheck())
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["nontrivial_py_files"], 0)
+        self.assertEqual(result["nontrivial_source_files"], 1)
+        self.assertEqual(result["nontrivial_source_examples"], ["/workspace/submission/run.sh"])
 
     def test_precheck_fails_when_only_output_artifact_present(self) -> None:
         # Zero .py files, but a CSV exists under /workspace/output.

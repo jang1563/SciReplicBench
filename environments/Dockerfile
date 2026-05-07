@@ -30,6 +30,8 @@ RUN python -m pip install --upgrade pip setuptools wheel uv && \
     uv pip install --system --no-cache --compile-bytecode \
         -r /tmp/scireplicbench-requirements.txt
 
+RUN python -c "import scanpy; import spatialdata; import squidpy; import zarr"
+
 RUN mkdir -p /workspace/input /workspace/output /workspace/submission /workspace/logs
 
 ENTRYPOINT ["/usr/bin/tini", "--"]

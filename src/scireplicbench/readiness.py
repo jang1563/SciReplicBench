@@ -3,17 +3,25 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .rubric_utils import collect_leaf_nodes, extract_rubric_tree
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PAPERS_DIR = PROJECT_ROOT / "papers"
 JUDGE_GRADES_PATH = PROJECT_ROOT / "judge_eval" / "human_grades.json"
+RESULT_MATCH_REFERENCE_FILENAME = "result_match_reference.json"
+EXECUTION_REFERENCE_FILENAME = "execution_reference.json"
+CODE_DEVELOPMENT_REFERENCE_FILENAME = "code_development_reference.json"
 
 _PENDING_HIDDEN_REFERENCE_STATUSES = {
     "pending",
     "pending_benchmark_author_fill_in",
+    "todo",
+    "disabled",
 }
 
 _INSPIRATION4_READY_SUFFIXES = (
@@ -22,6 +30,39 @@ _INSPIRATION4_READY_SUFFIXES = (
     ".mudata",
     ".zarr",
 )
+
+
+def _version_tuple(version: str) -> tuple[int, ...]:
+    parts: list[int] = []
+    for part in version.split("."):
+        match = re.match(r"(\d+)", part)
+        if not match:
+            break
+        parts.append(int(match.group(1)))
+    return tuple(parts) or (0,)
+
+
+def _version_lt(left: str, right: str) -> bool:
+    left_tuple = _version_tuple(left)
+    right_tuple = _version_tuple(right)
+    max_len = max(len(left_tuple), len(right_tuple))
+    left_tuple += (0,) * (max_len - len(left_tuple))
+    right_tuple += (0,) * (max_len - len(right_tuple))
+    return left_tuple < right_tuple
+
+
+def _requirement_has_safe_upper_bound(text: str, package: str, upper: str) -> bool:
+    """Return whether a requirements file pins `package` below `upper`."""
+
+    pattern = re.compile(rf"^\s*{re.escape(package)}\s*(?P<op>==|<)\s*(?P<version>[^\s#]+)", re.MULTILINE)
+    for match in pattern.finditer(text):
+        op = match.group("op")
+        version = match.group("version")
+        if op == "==":
+            return _version_lt(version, upper)
+        if op == "<":
+            return _version_tuple(version) <= _version_tuple(upper)
+    return False
 
 
 @dataclass
@@ -74,6 +115,91 @@ def hidden_reference_ready(paper_id: str) -> tuple[bool, str | None]:
     return True, None
 
 
+def result_match_reference_ready(paper_id: str) -> tuple[bool, str | None]:
+    """Check whether all result_match leaves have sealed comparator references."""
+
+    return _category_reference_ready(
+        paper_id,
+        category="result_match",
+        filename=RESULT_MATCH_REFERENCE_FILENAME,
+        label="result_match",
+    )
+
+
+def execution_reference_ready(paper_id: str) -> tuple[bool, str | None]:
+    """Check whether execution leaves have deterministic artifact checks."""
+
+    return _category_reference_ready(
+        paper_id,
+        category="execution",
+        filename=EXECUTION_REFERENCE_FILENAME,
+        label="execution",
+    )
+
+
+def code_development_reference_ready(paper_id: str) -> tuple[bool, str | None]:
+    """Check whether code-development leaves have deterministic source checks."""
+
+    return _category_reference_ready(
+        paper_id,
+        category="code_development",
+        filename=CODE_DEVELOPMENT_REFERENCE_FILENAME,
+        label="code_development",
+    )
+
+
+def _category_reference_ready(
+    paper_id: str,
+    *,
+    category: str,
+    filename: str,
+    label: str,
+) -> tuple[bool, str | None]:
+    """Check whether every rubric leaf in a category has a ready reference config."""
+
+    rubric_path = PAPERS_DIR / paper_id / "rubric.json"
+    if not rubric_path.exists():
+        return False, "rubric.json is missing"
+
+    rubric = _load_json(rubric_path)
+    category_leaves = [
+        str(leaf["id"])
+        for leaf in collect_leaf_nodes(extract_rubric_tree(rubric))
+        if str(leaf.get("category", "")) == category
+    ]
+    if not category_leaves:
+        return True, None
+
+    reference_path = PAPERS_DIR / paper_id / "reference_outputs" / filename
+    if not reference_path.exists():
+        return False, f"{filename} is missing"
+
+    reference = _load_json(reference_path)
+    leaves = reference.get("leaves")
+    if not isinstance(leaves, dict):
+        return False, f"{filename} lacks a leaves object"
+
+    missing = [leaf_id for leaf_id in category_leaves if leaf_id not in leaves]
+    pending = []
+    for leaf_id in category_leaves:
+        config = leaves.get(leaf_id)
+        if not isinstance(config, dict):
+            continue
+        status = str(config.get("status", "ready")).strip().lower()
+        if config.get("enabled") is False or status in _PENDING_HIDDEN_REFERENCE_STATUSES:
+            pending.append(leaf_id)
+
+    if missing or pending:
+        pieces = []
+        if missing:
+            pieces.append(f"{len(missing)} {label} leaves lack deterministic references")
+        if pending:
+            pieces.append(f"{len(pending)} {label} references are pending")
+        return False, "; ".join(pieces)
+
+    return True, None
+
+
 def second_human_rater_ready(path: Path = JUDGE_GRADES_PATH) -> tuple[bool, str | None]:
     """Check whether the judge-review packet has at least two human scores per item."""
 
@@ -106,8 +232,10 @@ def squidpy_runtime_hardening_ready() -> tuple[bool, str | None]:
 
     requirements_path = PROJECT_ROOT / "environments" / "requirements.squidpy_spatial.txt"
     text = requirements_path.read_text()
-    if "numcodecs<0.16" not in text:
-        return False, "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
+    if not _requirement_has_safe_upper_bound(text, "numcodecs", "0.16"):
+        return False, "requirements.squidpy_spatial.txt still lacks a numcodecs<0.16-compatible pin"
+    if not _requirement_has_safe_upper_bound(text, "setuptools", "82"):
+        return False, "requirements.squidpy_spatial.txt still lacks a setuptools<82-compatible pin for pkg_resources compatibility"
     return True, None
 
 
@@ -137,6 +265,10 @@ def _paper_production_blockers(paper_id: str) -> list[str]:
     if not hidden_reference_ok and hidden_reference_reason:
         blockers.append(hidden_reference_reason)
 
+    result_reference_ok, result_reference_reason = result_match_reference_ready(paper_id)
+    if not result_reference_ok and result_reference_reason:
+        blockers.append(result_reference_reason)
+
     if paper_id == "inspiration4_multiome":
         object_ready, object_reason = inspiration4_object_ready()
         if not object_ready and object_reason:
@@ -146,6 +278,12 @@ def _paper_production_blockers(paper_id: str) -> list[str]:
         hardened, hardening_reason = squidpy_runtime_hardening_ready()
         if not hardened and hardening_reason:
             blockers.append(hardening_reason)
+        execution_ok, execution_reason = execution_reference_ready(paper_id)
+        if not execution_ok and execution_reason:
+            blockers.append(execution_reason)
+        code_ok, code_reason = code_development_reference_ready(paper_id)
+        if not code_ok and code_reason:
+            blockers.append(code_reason)
 
     return blockers
 
@@ -184,10 +322,13 @@ __all__ = [
     "JUDGE_GRADES_PATH",
     "PROJECT_ROOT",
     "ReadinessGate",
+    "code_development_reference_ready",
+    "execution_reference_ready",
     "hidden_reference_ready",
     "inspiration4_object_ready",
     "load_novel_contrast",
     "phase_readiness_gate",
+    "result_match_reference_ready",
     "second_human_rater_ready",
     "squidpy_runtime_hardening_ready",
 ]

@@ -10,16 +10,17 @@ from scireplicbench.tools import (
     PROTECTED_GENELAB_OUTPUT_MESSAGE,
     PROTECTED_GENELAB_SIDECAR_MESSAGE,
     PROTECTED_GENELAB_SOURCE_MESSAGE,
+    PROTECTED_SQUIDPY_SOURCE_MESSAGE,
     PROTECTED_STARTER_LAUNCHER,
     PROTECTED_STARTER_MAIN_ANALYSIS,
     PROTECTED_SUBMISSION_LAUNCHER,
     PROTECTED_SUBMISSION_MAIN_ANALYSIS,
     PROTECTED_SUBMISSION_MANIFEST,
     PROTECTED_SUBMISSION_SCAFFOLD,
+    _bash_command_writes_or_runs_protected_sidecar,
     _bash_command_writes_protected_manifest,
     _bash_command_writes_protected_source,
     _bash_command_writes_protected_launcher,
-    _bash_command_writes_or_runs_protected_sidecar,
     _is_protected_genelab_output_path,
     _is_protected_genelab_manifest_path,
     _is_protected_genelab_sidecar_path,
@@ -28,14 +29,19 @@ from scireplicbench.tools import (
     _looks_like_genelab_alternate_sidecar_source,
     _looks_like_rich_genelab_manifest,
     _looks_like_rich_genelab_source,
+    _looks_like_rich_squidpy_source,
     _looks_like_rich_genelab_tsv,
     _normalize_workspace_text_path,
+    _submission_main_analysis_looks_like_rich_genelab,
+    _submission_main_analysis_looks_like_rich_squidpy,
     _truncate_workspace_text,
     _would_append_to_protected_genelab_source,
+    _would_append_to_protected_squidpy_source,
     _would_create_protected_genelab_sidecar,
     _would_downgrade_protected_genelab_manifest,
     _would_downgrade_protected_genelab_output,
     _would_downgrade_protected_genelab_source,
+    _would_downgrade_protected_squidpy_source,
 )
 
 
@@ -574,6 +580,32 @@ class ProtectedGeneLabSourceTest(unittest.TestCase):
             )
         )
 
+    def test_generic_starter_does_not_trigger_genelab_source_lock(self) -> None:
+        class FakeEnv:
+            def __init__(self, files: dict[str, str]) -> None:
+                self.files = files
+
+            async def read_file(self, path: str) -> str:
+                if path not in self.files:
+                    raise FileNotFoundError(path)
+                return self.files[path]
+
+        squidpy_source = (
+            "import squidpy as sq\n"
+            "sq.gr.spatial_neighbors(adata, coord_type='grid')\n"
+            "results.to_csv('/workspace/output/agent/neighborhood/nhood_enrichment_ranked.tsv')\n"
+        )
+        env = FakeEnv(
+            {
+                PROTECTED_STARTER_MAIN_ANALYSIS: squidpy_source,
+                PROTECTED_SUBMISSION_MAIN_ANALYSIS: squidpy_source,
+            }
+        )
+
+        self.assertFalse(
+            asyncio.run(_submission_main_analysis_looks_like_rich_genelab(env))
+        )
+
     def test_bash_guard_blocks_source_mutations_but_allows_starter_copy(self) -> None:
         blocked_commands = [
             "cat <<'PY' > /workspace/submission/main_analysis.py\nprint('thin')\nPY",
@@ -594,6 +626,88 @@ class ProtectedGeneLabSourceTest(unittest.TestCase):
             _bash_command_writes_protected_source(
                 "python3 /workspace/submission/main_analysis.py"
             )
+        )
+
+
+class ProtectedSquidpySourceTest(unittest.TestCase):
+    def _rich_source(self) -> str:
+        starter_path = Path("papers/squidpy_spatial/starter/main_analysis.py")
+        return starter_path.read_text()
+
+    def test_rich_squidpy_source_detection_accepts_real_starter(self) -> None:
+        self.assertTrue(_looks_like_rich_squidpy_source(self._rich_source()))
+
+    def test_squidpy_source_downgrade_guard_blocks_thin_replacement(self) -> None:
+        class FakeEnv:
+            def __init__(self, files: dict[str, str]) -> None:
+                self.files = files
+
+            async def read_file(self, path: str) -> str:
+                if path not in self.files:
+                    raise FileNotFoundError(path)
+                return self.files[path]
+
+        rich_source = self._rich_source()
+        shallow_replacement = (
+            "import squidpy as sq\n"
+            "adata = sq.datasets.visium_hne_adata()\n"
+            "sq.gr.spatial_neighbors(adata)\n"
+        )
+        env = FakeEnv(
+            {
+                PROTECTED_STARTER_MAIN_ANALYSIS: rich_source,
+                PROTECTED_SUBMISSION_MAIN_ANALYSIS: rich_source,
+            }
+        )
+
+        self.assertTrue(
+            asyncio.run(
+                _would_downgrade_protected_squidpy_source(
+                    env,
+                    PROTECTED_SUBMISSION_MAIN_ANALYSIS,
+                    shallow_replacement,
+                )
+            )
+        )
+        self.assertFalse(
+            asyncio.run(
+                _would_downgrade_protected_squidpy_source(
+                    env,
+                    PROTECTED_SUBMISSION_MAIN_ANALYSIS,
+                    rich_source,
+                )
+            )
+        )
+        self.assertIn("thin partial script", PROTECTED_SQUIDPY_SOURCE_MESSAGE)
+
+    def test_squidpy_source_append_guard_blocks_mutating_seeded_source(self) -> None:
+        class FakeEnv:
+            def __init__(self, files: dict[str, str]) -> None:
+                self.files = files
+
+            async def read_file(self, path: str) -> str:
+                if path not in self.files:
+                    raise FileNotFoundError(path)
+                return self.files[path]
+
+        rich_source = self._rich_source()
+        env = FakeEnv(
+            {
+                PROTECTED_STARTER_MAIN_ANALYSIS: rich_source,
+                PROTECTED_SUBMISSION_MAIN_ANALYSIS: rich_source,
+            }
+        )
+
+        self.assertTrue(
+            asyncio.run(
+                _would_append_to_protected_squidpy_source(
+                    env,
+                    PROTECTED_SUBMISSION_MAIN_ANALYSIS,
+                )
+            )
+        )
+        self.assertTrue(
+            asyncio.run(_submission_main_analysis_looks_like_rich_squidpy(env))
         )
 
 

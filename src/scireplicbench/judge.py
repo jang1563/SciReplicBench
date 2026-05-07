@@ -8,6 +8,8 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, Union
 
+from .workspace import workspace_path
+
 
 @dataclass
 class LeafJudgement:
@@ -75,11 +77,13 @@ _LEAF_ALIGNMENT_PATTERNS: tuple[tuple[str, str], ...] = (
 
 
 def _evidence_policy_text(category: str) -> str:
+    submission_root = workspace_path("submission")
+    output_root = workspace_path("output")
     if category == "code_development":
         return (
             "For code_development leaves, README text or planning prose is not valid "
             "evidence. The evidence_quote must be copied from a "
-            "`--- /workspace/submission/... ---` content block that contains "
+            f"`--- {submission_root}/... ---` content block that contains "
             "agent-authored implementation code or configuration from submission "
             "files. Do not quote output artifact text, file-list lines, README or "
             "markdown text, task prose, or submission_manifest.json. If the "
@@ -89,7 +93,7 @@ def _evidence_policy_text(category: str) -> str:
         return (
             "For execution leaves, README text or planning prose is not valid "
             "evidence. The evidence_quote must be copied from a "
-            "`--- /workspace/output/... ---` content block, usually an output "
+            f"`--- {output_root}/... ---` content block, usually an output "
             "header, row, summary line, or runtime text showing that the requested "
             "artifact family was actually produced. Do not quote bare output paths, "
             "file-list lines, submission code, README or markdown text, task prose, "
@@ -100,7 +104,7 @@ def _evidence_policy_text(category: str) -> str:
         return (
             "For result_match leaves, submission-side claims are not valid evidence. "
             "The evidence_quote must be copied from a "
-            "`--- /workspace/output/... ---` content block containing "
+            f"`--- {output_root}/... ---` content block containing "
             "benchmark-comparable values from non-README output artifacts. Do not "
             "quote bare paths, file-list lines, submission code, README or markdown "
             "text, task prose, or submission_manifest.json. If a metric is only "
@@ -114,6 +118,7 @@ def _evidence_policy_text(category: str) -> str:
 
 def _leaf_alignment_text(leaf: dict[str, Any]) -> str:
     category = str(leaf.get("category", "unknown"))
+    output_root = workspace_path("output")
     context = " ".join(
         str(part)
         for part in (
@@ -147,7 +152,7 @@ def _leaf_alignment_text(leaf: dict[str, Any]) -> str:
             "Execution evidence must correspond to the output family named by this leaf; a file or metric from one analysis family is not enough for another."
         )
         lines.append(
-            "For execution leaves about written artifacts, score 1 when a /workspace/output content block contains a header or row for the requested artifact family; do not require hidden-reference agreement."
+            f"For execution leaves about written artifacts, score 1 when a {output_root} content block contains a header or row for the requested artifact family; do not require hidden-reference agreement."
         )
         lines.append(
             "When runtime or output text explicitly names the exact dataset, function, or artifact family required by the leaf and shows successful completion, that output-side evidence can be sufficient even if the matching code excerpt is not visible."
@@ -205,15 +210,14 @@ def format_leaf_judge_prompt(
         "- expectations: summarize what passing requires for this leaf.\n"
         "- reality: summarize what the submission actually did.\n"
         "- evidence_quote: quote the specific supporting text or command output verbatim.\n"
-        "- If score is 0 because no valid supporting evidence exists, set evidence_quote to exactly no_valid_evidence.\n"
         "- Prefer a short exact line or a few exact adjacent lines; do not merge multi-line source into one invented line.\n"
         "- Do not quote only a `--- path ---` content-block header; include concrete code or output content from below it.\n"
         "- score: 1 for pass, 0 for fail.\n"
         "- For score 1, evidence_quote must appear verbatim in Observed reality.\n"
-        "- For score 0, evidence_quote should appear verbatim when possible; otherwise use no_valid_evidence.\n"
-        "- Interpret words like `or` and `such as` literally: alternatives or examples do not require every listed example unless the leaf explicitly says all are required.\n"
-        "- For code_development leaves, a primary saved-source implementation can pass even if the code also contains a fallback path; grade the primary implementation and quote its concrete code.\n"
-        "- For execution and result_match leaves, headers plus representative rows in an eligible output artifact are valid evidence that the artifact was written; do not require separate prose saying it was saved.\n"
+        "- For score 0 when no valid quote exists, set evidence_quote to `no_valid_evidence`.\n"
+        "- Interpret words like `or` and `such as` literally; do not collapse alternatives into adjacent requirements.\n"
+        "- For code_development, a primary saved-source implementation can pass even when result-match evidence is absent.\n"
+        "- For execution, headers plus representative rows from output artifacts are valid evidence when they name the requested artifact family.\n"
         "- Do not omit evidence_quote.\n"
         "- Do not infer unstated steps or substitute evidence from a different metric family.\n"
         "- Do not add markdown fences or commentary outside the JSON object."
@@ -285,9 +289,9 @@ def parse_leaf_judgement(
     evidence_quote = str(payload["evidence_quote"]).strip()
     if not evidence_quote:
         if score == 0:
+            evidence_quote = "no_valid_evidence"
             metadata = dict(metadata)
             metadata["empty_evidence_quote_repaired"] = True
-            evidence_quote = "no_valid_evidence"
         else:
             raise ValueError("Judge evidence_quote must be non-empty.")
 

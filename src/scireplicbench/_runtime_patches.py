@@ -225,7 +225,11 @@ def _apply_scorer_patch() -> None:
                     )
                 )
 
-                precheck = await scorers._artifact_presence_precheck()
+                precheck = await scorers._artifact_presence_precheck(
+                    require_output_artifact=scorers._result_match_requires_output_artifact(
+                        paper_id
+                    )
+                )
                 if not precheck["ok"]:
                     judgements = [
                         scorers.LeafJudgement(
@@ -236,7 +240,11 @@ def _apply_scorer_patch() -> None:
                             score=0,
                             metadata={
                                 "precheck_failed": True,
-                                "nontrivial_py_files": precheck["nontrivial_py_files"],
+                                "nontrivial_py_files": precheck.get("nontrivial_py_files", 0),
+                                "nontrivial_source_files": precheck.get(
+                                    "nontrivial_source_files",
+                                    precheck.get("nontrivial_py_files", 0),
+                                ),
                                 "output_artifact_count": precheck["output_artifact_count"],
                             },
                         )
@@ -257,6 +265,13 @@ def _apply_scorer_patch() -> None:
                                     metadata={"skipped": True},
                                 )
                             )
+                            continue
+                        deterministic_judgement = await scorers._deterministic_leaf_judgement(
+                            leaf,
+                            paper_id=paper_id,
+                        )
+                        if deterministic_judgement is not None:
+                            judgements.append(deterministic_judgement)
                             continue
                         judged = await _judge_leaf_with_self_consistency(
                             judge,
@@ -296,13 +311,50 @@ def _apply_scorer_patch() -> None:
                         "judge_failures": sum(
                             1 for judgement in judgements if judgement.metadata.get("judge_failure")
                         ),
+                        "deterministic_result_match_leaves": sum(
+                            1
+                            for judgement in judgements
+                            if judgement.metadata.get("deterministic_result_match")
+                        ),
+                        "deterministic_execution_leaves": sum(
+                            1
+                            for judgement in judgements
+                            if judgement.metadata.get("deterministic_execution")
+                        ),
+                        "deterministic_code_development_leaves": sum(
+                            1
+                            for judgement in judgements
+                            if judgement.metadata.get("deterministic_code_development")
+                        ),
+                        "deterministic_reference_missing": sum(
+                            1
+                            for judgement in judgements
+                            if judgement.metadata.get("deterministic_reference_missing")
+                        ),
+                        "deterministic_execution_reference_missing": sum(
+                            1
+                            for judgement in judgements
+                            if judgement.metadata.get("deterministic_execution_reference_missing")
+                        ),
+                        "deterministic_code_development_reference_missing": sum(
+                            1
+                            for judgement in judgements
+                            if judgement.metadata.get(
+                                "deterministic_code_development_reference_missing"
+                            )
+                        ),
                         "precheck": precheck,
                         "leaf_judgements": [judgement.to_dict() for judgement in judgements],
                     }
                 )
+                metadata.update(
+                    scorers._score_interpretation_metadata(base_score.value, judgements)
+                )
                 return scorers.InspectScore(
                     value=base_score.value,
-                    explanation=base_score.explanation,
+                    explanation=scorers._score_explanation_with_lane(
+                        base_score.explanation, metadata
+                    ),
                     metadata=metadata,
                 )
 

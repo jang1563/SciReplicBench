@@ -1,0 +1,5 @@
+services:
+  agent:
+    network_mode: bridge
+    volumes:
+      - ../papers/squidpy_spatial/data:/workspace/input/paper_bundle/data

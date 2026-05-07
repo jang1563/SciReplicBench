@@ -1,2 +1,1 @@
 -r requirements.squidpy_spatial.txt
-numcodecs<0.16

@@ -252,9 +252,7 @@
       "pilot_ready": true,
       "production_ready": false,
       "blocking_reasons": [],
-      "advisories": [
-        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
-      ]
+      "advisories": []
     },
     "judge_self_consistency_n": 1,
     "judge_self_consistency_min_confidence": 0.6,
@@ -327,9 +325,7 @@
       "pilot_ready": true,
       "production_ready": false,
       "blocking_reasons": [],
-      "advisories": [
-        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
-      ]
+      "advisories": []
     },
     "judge_self_consistency_n": 1,
     "judge_self_consistency_min_confidence": 0.6,
@@ -400,9 +396,7 @@
       "pilot_ready": true,
       "production_ready": false,
       "blocking_reasons": [],
-      "advisories": [
-        "requirements.squidpy_spatial.txt still lacks numcodecs<0.16"
-      ]
+      "advisories": []
     },
     "judge_self_consistency_n": 1,
     "judge_self_consistency_min_confidence": 0.6,

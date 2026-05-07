@@ -1,0 +1,36 @@
+{
+  "n_observations": 2688,
+  "n_features": 26,
+  "segmentation_feature_count": 5,
+  "cluster_counts": {
+    "image_cluster_0": 779,
+    "image_cluster_1": 1015,
+    "image_cluster_2": 43,
+    "image_cluster_3": 373,
+    "image_cluster_4": 478
+  },
+  "top10_features_by_cluster_f": [
+    "segmentation_label",
+    "texture_ch-0_contrast_dist-1_angle-0.00",
+    "summary_ch-2_quantile-0.9",
+    "summary_ch-2_std",
+    "histogram_ch-0_bin-1",
+    "segmentation_ch-0_mean_intensity_mean",
+    "histogram_ch-0_bin-2",
+    "histogram_ch-0_bin-3",
+    "texture_ch-0_homogeneity_dist-1_angle-0.00",
+    "summary_ch-0_std"
+  ],
+  "recipe": {
+    "features": [
+      "histogram",
+      "segmentation",
+      "summary",
+      "texture"
+    ],
+    "segmentation": "sq.im.segment(..., method='watershed', channel=0)",
+    "spot_scale": 1.0,
+    "kmeans_clusters": 5,
+    "kmeans_random_state": 0
+  }
+}
