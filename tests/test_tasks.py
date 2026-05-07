@@ -189,15 +189,28 @@ class TaskConfigTest(unittest.TestCase):
             any("/data/raw/GeneLab_benchmark/tasks/A3_kidney_lomo/" in sandbox_path for sandbox_path in file_map),
             msg="Raw labels without staged feature matrices should not distract the reviewer path",
         )
-        self.assertTrue(
-            any(
-                sandbox_path.endswith(
-                    "/data/raw/GeneLab_benchmark/tasks/A2_gastrocnemius_lomo/fold_RR-1_test/train_y.csv"
-                )
-                for sandbox_path in file_map
-            ),
-            msg="Reviewer-path labels matching staged feature matrices should remain staged",
+        expected_label = (
+            tasks.PROJECT_ROOT
+            / "papers"
+            / "genelab_benchmark"
+            / "data"
+            / "raw"
+            / "GeneLab_benchmark"
+            / "tasks"
+            / "A2_gastrocnemius_lomo"
+            / "fold_RR-1_test"
+            / "train_y.csv"
         )
+        if expected_label.exists():
+            self.assertTrue(
+                any(
+                    sandbox_path.endswith(
+                        "/data/raw/GeneLab_benchmark/tasks/A2_gastrocnemius_lomo/fold_RR-1_test/train_y.csv"
+                    )
+                    for sandbox_path in file_map
+                ),
+                msg="Reviewer-path labels matching staged feature matrices should remain staged",
+            )
 
     def test_paper_bundle_file_map_excludes_hidden_reference_outputs(self) -> None:
         file_map = _paper_bundle_file_map("squidpy_spatial")
@@ -247,7 +260,7 @@ class TaskConfigTest(unittest.TestCase):
         self.assertFalse(any(path.startswith("reproducer:") for path in file_map))
         self.assertTrue(
             any(
-                path == f"{root}/input/paper_bundle/data/dataset_manifest.json"
+                path == f"{root}/input/paper_bundle/data/ligrec_interactions.tsv"
                 for path in file_map
             )
         )
