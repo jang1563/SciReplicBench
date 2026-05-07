@@ -4,7 +4,11 @@ import json
 import unittest
 
 from scireplicbench.readiness import PROJECT_ROOT
-from scireplicbench.run_plan import build_phase4a_plan, build_phase4b_plan
+from scireplicbench.run_plan import (
+    build_phase4a_plan,
+    build_phase4b_plan,
+    render_plan_markdown,
+)
 
 
 class RunPlanReadinessTest(unittest.TestCase):
@@ -40,3 +44,9 @@ class RunPlanReadinessTest(unittest.TestCase):
         committed_manifest = json.loads(manifest_path.read_text())
         expected_manifest = [entry.to_dict() for entry in build_phase4b_plan()]
         self.assertEqual(committed_manifest, expected_manifest)
+
+    def test_run_plan_markdown_summarizes_blocking_reasons_once_per_paper(self) -> None:
+        markdown = render_plan_markdown(build_phase4b_plan(seeds=(1,)))
+        self.assertIn("## Blocking Reasons", markdown)
+        self.assertEqual(markdown.count("squidpy_spatial | evaluation |"), 1)
+        self.assertIn("only one human rater", markdown)

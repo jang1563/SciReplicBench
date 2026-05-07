@@ -226,6 +226,38 @@ def render_plan_markdown(entries: list[RunPlanEntry]) -> str:
             f"{entry.agent.label} | {entry.judge.label} | {entry.seed} | "
             f"{entry.cost_limit_usd or 0:.2f} |"
         )
+
+    blocker_rows: list[tuple[str, str, str, list[str]]] = []
+    seen_blocker_keys: set[tuple[str, str, str]] = set()
+    for entry in entries:
+        reasons = [
+            str(reason).replace("|", "\\|")
+            for reason in entry.readiness_gate.get("blocking_reasons", [])
+        ]
+        if not reasons:
+            continue
+        lane = str(entry.readiness_gate.get("lane", "evaluation"))
+        key = (entry.phase, entry.paper_id, lane)
+        if key in seen_blocker_keys:
+            continue
+        seen_blocker_keys.add(key)
+        blocker_rows.append((entry.phase, entry.paper_id, lane, reasons))
+
+    if blocker_rows:
+        lines.extend(
+            [
+                "",
+                "## Blocking Reasons",
+                "",
+                "| Phase | Paper | Lane | Reasons |",
+                "|---|---|---|---|",
+            ]
+        )
+        for phase, paper_id, lane, reasons in blocker_rows:
+            lines.append(
+                f"| {phase} | {paper_id} | {lane} | {'<br>'.join(reasons)} |"
+            )
+
     return "\n".join(lines) + "\n"
 
 

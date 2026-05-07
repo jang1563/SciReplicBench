@@ -11,3 +11,9 @@
 | phase4a_pilot | genelab_benchmark | ready | evaluation | gpt-4o-mini | gpt-4o-mini | 1 | 2.50 |
 | phase4a_pilot | genelab_benchmark | ready | evaluation | claude-haiku-4-5 | gpt-4o-mini | 1 | 2.50 |
 | phase4a_pilot | genelab_benchmark | ready | evaluation | deepseek-v3 | gpt-4o-mini | 1 | 2.50 |
+
+## Blocking Reasons
+
+| Phase | Paper | Lane | Reasons |
+|---|---|---|---|
+| phase4a_pilot | inspiration4_multiome | enablement | benchmark-ready AnnData or MuData object is not staged under papers/inspiration4_multiome/data/cache |
