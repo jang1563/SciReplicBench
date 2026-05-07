@@ -166,6 +166,122 @@ class JudgeBenchmarkTest(unittest.TestCase):
             self.assertNotIn("openai/o3-mini", csv_text)
             self.assertNotIn("judge_score", csv_text)
 
+    def test_load_blinded_review_responses_from_json(self) -> None:
+        packet = {
+            "examples": [
+                {
+                    "example_id": "ex1",
+                    "response_template": {
+                        "rater_id": "reviewer_2",
+                        "human_score": 0,
+                        "note": "No written output was shown.",
+                    },
+                }
+            ]
+        }
+        responses = judge_benchmark.blinded_review_responses_from_packet(packet)
+        self.assertEqual(len(responses), 1)
+        self.assertEqual(responses[0].example_id, "ex1")
+        self.assertEqual(responses[0].rater_id, "reviewer_2")
+        self.assertEqual(responses[0].human_score, 0)
+        self.assertEqual(responses[0].note, "No written output was shown.")
+
+    def test_load_blinded_review_responses_from_csv_skips_blank_when_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            csv_path = Path(tmpdir) / "responses.csv"
+            csv_path.write_text(
+                "example_id,rater_id,human_score,note\n"
+                "ex1,reviewer_2,1,Looks valid.\n"
+                "ex2,,,\n"
+            )
+
+            responses = judge_benchmark.blinded_review_responses_from_csv(
+                csv_path,
+                allow_incomplete=True,
+            )
+
+        self.assertEqual(len(responses), 1)
+        self.assertEqual(responses[0].example_id, "ex1")
+        self.assertEqual(responses[0].human_score, 1)
+
+    def test_blank_blinded_review_response_is_rejected_by_default(self) -> None:
+        packet = {
+            "examples": [
+                {
+                    "example_id": "ex1",
+                    "response_template": {
+                        "rater_id": "",
+                        "human_score": None,
+                        "note": "",
+                    },
+                }
+            ]
+        }
+        with self.assertRaisesRegex(ValueError, "response is incomplete"):
+            judge_benchmark.blinded_review_responses_from_packet(packet)
+
+    def test_merge_blinded_review_responses_adds_second_rater_notes(self) -> None:
+        grade_payload = {
+            "schema_version": "0.1.0",
+            "human_grades": [
+                {
+                    "example_id": "ex1",
+                    "paper_id": "squidpy_spatial",
+                    "leaf_id": "leaf1",
+                    "human_scores": {"reviewer_provisional": 1},
+                    "judge_scores": {"openai/o3-mini": 1},
+                    "metadata": {"provisional_single_rater": True},
+                }
+            ],
+        }
+        responses = [
+            judge_benchmark.BlindedReviewResponse(
+                example_id="ex1",
+                rater_id="reviewer_2",
+                human_score=0,
+                note="I do not see runtime evidence.",
+            )
+        ]
+
+        merged, merged_count = judge_benchmark.merge_blinded_review_responses(
+            grade_payload,
+            responses,
+        )
+
+        self.assertEqual(merged_count, 1)
+        record = merged["human_grades"][0]
+        self.assertEqual(record["human_scores"]["reviewer_provisional"], 1)
+        self.assertEqual(record["human_scores"]["reviewer_2"], 0)
+        self.assertFalse(record["metadata"]["provisional_single_rater"])
+        self.assertEqual(
+            record["metadata"]["human_review_notes"]["reviewer_2"],
+            "I do not see runtime evidence.",
+        )
+
+    def test_merge_blinded_review_responses_rejects_conflicting_existing_score(self) -> None:
+        grade_payload = {
+            "human_grades": [
+                {
+                    "example_id": "ex1",
+                    "paper_id": "squidpy_spatial",
+                    "leaf_id": "leaf1",
+                    "human_scores": {"reviewer_2": 1},
+                    "judge_scores": {},
+                    "metadata": {},
+                }
+            ]
+        }
+        responses = [
+            judge_benchmark.BlindedReviewResponse(
+                example_id="ex1",
+                rater_id="reviewer_2",
+                human_score=0,
+            )
+        ]
+
+        with self.assertRaisesRegex(ValueError, "already has a different score"):
+            judge_benchmark.merge_blinded_review_responses(grade_payload, responses)
+
 
 if __name__ == "__main__":
     unittest.main()
