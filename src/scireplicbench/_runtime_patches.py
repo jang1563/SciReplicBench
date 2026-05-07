@@ -101,7 +101,9 @@ def _apply_scorer_patch() -> None:
     from . import scorers
     from .judge import majority_vote_judgements, needs_self_consistency_retry
 
-    if getattr(scorers, "_REALIGNMENT_PATCHED", False):
+    if getattr(scorers, "_REALIGNMENT_PATCHED", False) or getattr(
+        scorers, "_REALIGNMENT_NATIVE", False
+    ):
         return
 
     scorers._JUDGE_SELF_CONSISTENCY_N_ENV = "SCIREPLICBENCH_JUDGE_SELF_CONSISTENCY_N"

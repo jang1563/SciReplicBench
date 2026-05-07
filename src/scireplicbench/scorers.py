@@ -20,7 +20,13 @@ from .comparators import (
     spearman_correlation,
     within_percent_tolerance,
 )
-from .judge import LeafJudgement, format_leaf_judge_prompt, parse_leaf_judgement
+from .judge import (
+    LeafJudgement,
+    format_leaf_judge_prompt,
+    majority_vote_judgements,
+    needs_self_consistency_retry,
+    parse_leaf_judgement,
+)
 from .rubric_utils import collect_leaf_ids, collect_leaf_nodes, extract_rubric_tree, validate_rubric_payload
 from .workspace import workspace_path, workspace_root
 
@@ -31,8 +37,13 @@ _JUDGE_MAX_SOURCE_FILE_CHARS = 22000
 _JUDGE_MAX_PAPER_CHARS = 3000
 _JUDGE_DEFAULT_MODEL = "openai/gpt-4o-mini"
 _JUDGE_LEAF_LIMIT_ENV = "SCIREPLICBENCH_JUDGE_LEAF_LIMIT"
+_JUDGE_SELF_CONSISTENCY_N_ENV = "SCIREPLICBENCH_JUDGE_SELF_CONSISTENCY_N"
+_JUDGE_SELF_CONSISTENCY_MIN_CONFIDENCE_ENV = (
+    "SCIREPLICBENCH_JUDGE_SELF_CONSISTENCY_MIN_CONFIDENCE"
+)
 _STARTER_MODE_ENV = "SCIREPLICBENCH_STARTER_MODE"
 _JUDGE_PARSE_RETRIES = 2
+_REALIGNMENT_NATIVE = True
 _REFERENCE_OUTPUTS_DIRNAME = "reference_outputs"
 _RESULT_MATCH_REFERENCE_FILENAME = "result_match_reference.json"
 _EXECUTION_REFERENCE_FILENAME = "execution_reference.json"
@@ -2993,6 +3004,90 @@ async def _judge_leaf(
     )
 
 
+async def _judge_leaf_with_self_consistency(
+    judge: Any,
+    leaf: dict[str, Any],
+    *,
+    paper_summary: str,
+    reality_context: str,
+    self_consistency_n: int = 1,
+    self_consistency_min_confidence: float = 0.6,
+) -> LeafJudgement:
+    """Judge a leaf with bounded retries when judge outputs are unstable."""
+
+    total_samples = max(1, int(self_consistency_n))
+    initial_samples = 1 if total_samples == 1 else min(2, total_samples)
+    judgements = [
+        await _judge_leaf(
+            judge,
+            leaf,
+            paper_summary=paper_summary,
+            reality_context=reality_context,
+        )
+        for _ in range(initial_samples)
+    ]
+
+    while len(judgements) < total_samples and needs_self_consistency_retry(
+        judgements,
+        min_confidence=self_consistency_min_confidence,
+    ):
+        judgements.append(
+            await _judge_leaf(
+                judge,
+                leaf,
+                paper_summary=paper_summary,
+                reality_context=reality_context,
+            )
+        )
+
+    if len(judgements) == 1:
+        judgement = judgements[0]
+        metadata = dict(judgement.metadata)
+        metadata.update(
+            {
+                "self_consistency_samples": 1,
+                "self_consistency_requested_n": total_samples,
+                "self_consistency_min_confidence": self_consistency_min_confidence,
+                "self_consistency_triggered": False,
+                "self_consistency_consensus": True,
+                "self_consistency_judgements": [judgement.to_dict()],
+            }
+        )
+        return LeafJudgement(
+            leaf_id=judgement.leaf_id,
+            expectations=judgement.expectations,
+            reality=judgement.reality,
+            evidence_quote=judgement.evidence_quote,
+            score=judgement.score,
+            confidence=judgement.confidence,
+            metadata=metadata,
+        )
+
+    consensus = majority_vote_judgements(judgements)
+    metadata = dict(consensus.metadata)
+    metadata.update(
+        {
+            "self_consistency_samples": len(judgements),
+            "self_consistency_requested_n": total_samples,
+            "self_consistency_min_confidence": self_consistency_min_confidence,
+            "self_consistency_triggered": len(judgements) > 1,
+            "self_consistency_consensus": len({j.score for j in judgements}) == 1,
+            "self_consistency_judgements": [
+                judgement.to_dict() for judgement in judgements
+            ],
+        }
+    )
+    return LeafJudgement(
+        leaf_id=consensus.leaf_id,
+        expectations=consensus.expectations,
+        reality=consensus.reality,
+        evidence_quote=consensus.evidence_quote,
+        score=consensus.score,
+        confidence=consensus.confidence,
+        metadata=metadata,
+    )
+
+
 if _HAS_INSPECT_SCORING:
 
     @scorer(metrics=[mean(), stderr()])
@@ -3000,6 +3095,8 @@ if _HAS_INSPECT_SCORING:
         judge_model: str = _JUDGE_DEFAULT_MODEL,
         *,
         leaf_limit: int | None = None,
+        self_consistency_n: int = 1,
+        self_consistency_min_confidence: float = 0.6,
     ):
         """Grade each rubric leaf with an LLM judge and aggregate to a weighted score.
 
@@ -3012,6 +3109,9 @@ if _HAS_INSPECT_SCORING:
           leaf_limit: Optional cap on leaves graded per sample. When provided,
             the remaining leaves are scored 0 with an informational evidence
             quote. Mainly useful for cheap smoke runs.
+          self_consistency_n: Maximum judge samples for unstable leaves.
+          self_consistency_min_confidence: Retry threshold when judges report
+            low confidence.
         """
 
         import os
@@ -3027,6 +3127,15 @@ if _HAS_INSPECT_SCORING:
 
             env_cap = os.getenv(_JUDGE_LEAF_LIMIT_ENV)
             cap = leaf_limit if leaf_limit is not None else (int(env_cap) if env_cap else None)
+            requested_n = int(
+                os.getenv(_JUDGE_SELF_CONSISTENCY_N_ENV, str(self_consistency_n))
+            )
+            min_confidence = float(
+                os.getenv(
+                    _JUDGE_SELF_CONSISTENCY_MIN_CONFIDENCE_ENV,
+                    str(self_consistency_min_confidence),
+                )
+            )
 
             precheck = await _artifact_presence_precheck(
                 require_output_artifact=_result_match_requires_output_artifact(paper_id)
@@ -3078,15 +3187,18 @@ if _HAS_INSPECT_SCORING:
                         judgements.append(deterministic_judgement)
                         continue
                     leaf_reality = _reality_context_for_leaf(leaf, reality)
+                    judged = await _judge_leaf_with_self_consistency(
+                        judge,
+                        leaf,
+                        paper_summary=paper_summary,
+                        reality_context=leaf_reality,
+                        self_consistency_n=requested_n,
+                        self_consistency_min_confidence=min_confidence,
+                    )
                     judgements.append(
                         _enforce_leaf_evidence_policy(
                             leaf,
-                            await _judge_leaf(
-                                judge,
-                                leaf,
-                                paper_summary=paper_summary,
-                                reality_context=leaf_reality,
-                            ),
+                            judged,
                             reality_context=reality,
                         )
                     )
@@ -3101,6 +3213,8 @@ if _HAS_INSPECT_SCORING:
                     "paper_id": paper_id,
                     "judge_model": judge_model,
                     "leaf_limit": cap,
+                    "judge_self_consistency_n": requested_n,
+                    "judge_self_consistency_min_confidence": min_confidence,
                     "leaves_graded": sum(
                         1
                         for j in judgements
