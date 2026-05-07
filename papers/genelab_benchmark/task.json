@@ -6,9 +6,31 @@
     "task_brief": "Reproduce the public GeneLab benchmark evaluation workflow using staged feature matrices, mission-safe split logic, classical baselines, and structured benchmark outputs.",
     "analysis_focus": [
       "load benchmark-ready feature matrices and split definitions without train-test leakage",
+      "start from the staged LOMO feature matrices under /workspace/input/paper_bundle/data/huggingface_dataset/A*_lomo/fold_*/train_X.csv and test_X.csv, joined to labels and metadata under /workspace/input/paper_bundle/data/raw/GeneLab_benchmark/tasks/A*_lomo/fold_*",
+      "treat each fold directory as the unit of work: for example, A2_gastrocnemius_lomo/fold_RR-1_test contains train_X.csv, test_X.csv, train_y.csv, test_y.csv, train_meta.csv, and test_meta.csv",
+      "do not assume train_X.csv, test_X.csv, or labels.csv exist at the tissue root; the tissue root only contains fold_* subdirectories",
+      "load train_X.csv and test_X.csv with the sample IDs in the first column as the dataframe index (for example, pandas read_csv(..., index_col=0)); the remaining columns are numeric gene features",
+      "load train_y.csv and test_y.csv with index_col=0 as well, then use the single numeric label column (for example, iloc[:, 0]) as the binary target vector rather than trying to model the sample-ID index",
+      "align train_X, test_X, train_y, and test_y by their shared sample IDs before fitting models, and do not treat sample IDs or metadata columns as numeric features",
+      "treat train_meta.csv and test_meta.csv as descriptive metadata for mission/tissue bookkeeping rather than as the main classification target source when train_y.csv and test_y.csv are already staged",
+      "the cached reviewer-path feature snapshot currently exposes four ready-to-run tissues (A2_gastrocnemius_lomo, A4_thymus_lomo, A5_skin_lomo, and A6_eye_lomo); do not assume A1_liver_lomo or A3_kidney_lomo feature matrices are present unless you explicitly regenerate them",
+      "prefer copying starter/main_analysis.py to /workspace/submission/main_analysis.py and starter/run.sh to /workspace/submission/run.sh, then extending them, instead of starting from blank files",
+      "because /workspace/submission is already seeded with the runnable starter baseline, execute /workspace/submission/run.sh once before making large edits and preserve the required TSV writers if you extend the workflow",
+      "keep the seeded /workspace/submission/run.sh launcher intact and put substantive changes in Python source files under /workspace/submission rather than replacing the launcher from scratch",
+      "preserve the seeded run.sh artifact checks, primary-script timeout, and fallback to the pristine starter if you inspect or lightly edit the launcher",
+      "the benchmark tools may reject attempts to overwrite the seeded GeneLab run.sh while the starter launcher is available; edit main_analysis.py or add helper source files instead",
+      "do not replace the seeded GeneLab baseline with a shorter placeholder script that only lists files or prints progress; preserve the fold discovery, model execution, and structured output paths",
+      "do not hard-code a single example fold as the whole benchmark; discover the staged fold_* directories and aggregate real results across the available folds you run",
+      "for AUROC, use probability-style scores (predict_proba, decision_function, or an equivalent continuous score), not hard class labels from predict()",
+      "required output TSVs must contain real tabular results with headers and at least one computed row; do not write placeholder sentences like 'placeholder for interpretability results'",
+      "if a branch such as cross-tissue transfer, negative controls, or interpretability is only partially completed, still emit an honest machine-readable TSV summarizing the attempted fold/model/metric/status rows rather than a free-text placeholder",
+      "treat the v4/v5/v6 evaluation JSON summaries as reference outputs rather than model-input feature matrices",
       "run leave-one-mission-out and transfer-style evaluation logic for multiple classical baselines",
       "emit AUROC, confidence intervals, permutation outputs, and interpretability artifacts in structured files",
-      "stage a rerunnable submission while documenting any optional Geneformer or HPC-only extensions"
+      "stage a rerunnable submission while documenting any optional Geneformer or HPC-only extensions",
+      "keep /workspace/submission/run.sh as a launcher that calls non-trivial Python source under /workspace/submission",
+      "do not leave the main analysis only inside python-tool scratch work; save the executable workflow under /workspace/submission before running it",
+      "execute the saved workflow and inspect non-empty outputs before submitting; placeholder touch files are not sufficient"
     ],
     "required_outputs": [
       "/workspace/submission/run.sh",
@@ -30,7 +52,14 @@
       "https://huggingface.co/datasets/jang1563/genelab-benchmark",
       "benchmark-prepared feature matrices and metadata tables staged under the paper bundle"
     ],
-    "reviewer_path": "Use benchmark-staged feature matrices and metadata in the default path. If those inputs are missing, use data/prepare_data.sh to fetch the public repository and dataset bundle, then document any remaining heavy Geneformer steps separately.",
+    "starter_files": [
+      "starter/README.md",
+      "starter/main_analysis.py",
+      "starter/run.sh",
+      "starter/genelab_scaffold.py"
+    ],
+    "seed_submission_from_starter": true,
+    "reviewer_path": "Use the benchmark-staged A-task feature matrices under data/huggingface_dataset/A*_lomo/fold_* together with the matching labels and metadata under data/raw/GeneLab_benchmark/tasks/A*_lomo/fold_*. Concretely, read files like data/huggingface_dataset/A2_gastrocnemius_lomo/fold_RR-1_test/train_X.csv and pair them with data/raw/GeneLab_benchmark/tasks/A2_gastrocnemius_lomo/fold_RR-1_test/train_y.csv, test_y.csv, train_meta.csv, and test_meta.csv. The cached reviewer-path feature snapshot currently exposes four ready-to-run tissues: A2_gastrocnemius_lomo, A4_thymus_lomo, A5_skin_lomo, and A6_eye_lomo. Do not assume A1_liver_lomo or A3_kidney_lomo feature matrices are present unless you explicitly regenerate them. There is no labels.csv or train_X.csv at the tissue root; the tissue root only contains fold_* subdirectories. Load train_X.csv and test_X.csv with index_col=0 so the sample IDs stay in the dataframe index and the remaining columns are numeric gene features. Load train_y.csv and test_y.csv with index_col=0 too, use the single numeric label column as the binary target vector, and align X/Y tables by shared sample IDs before fitting. Do not treat sample IDs or metadata columns as model features. Start by executing the seeded /workspace/submission/run.sh baseline once before deciding what to rewrite, keep that launcher intact, preserve its artifact checks, primary-script timeout, and fallback to the pristine staged starter, and put substantive changes in Python source files rather than replacing run.sh with a shorter script. The benchmark tools may reject attempts to overwrite the seeded GeneLab run.sh while the starter launcher is available. Discover and iterate real fold_* directories rather than hard-coding one example fold as the whole benchmark. For AUROC, score with probabilities or another continuous decision score rather than class labels. Treat train_meta.csv and test_meta.csv as descriptive mission/tissue metadata, and treat data/huggingface_dataset/v4, v5, and v6 evaluation JSONs as reference summaries rather than feature inputs. Keep run.sh as a thin launcher that invokes substantive Python under /workspace/submission, do not leave the main workflow only inside transient python-tool calls, and do not submit placeholder outputs. Required TSVs should contain real headers plus computed rows, and if a branch is only partially complete, emit an honest machine-readable status table instead of a free-text placeholder sentence. Execute the saved workflow and inspect the resulting output files before submitting. If the staged inputs are missing, use data/prepare_data.sh to fetch the public repository and dataset bundle, then document any remaining heavy Geneformer steps separately.",
     "novel_contrast_id": "adrenal_to_liver_pathway_transfer",
     "primary_output_root": "/workspace/output/agent",
     "agent_limits": {

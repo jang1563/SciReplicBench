@@ -1,0 +1,272 @@
+{
+  "schema_version": 1,
+  "generator": "scripts/generate_squidpy_reference_outputs.py",
+  "squidpy_version": "1.6.0",
+  "manifest": "papers/squidpy_spatial/data/dataset_manifest.json",
+  "graph_metrics": {
+    "visium": {
+      "spatial_neighbors": {
+        "coord_type": "grid",
+        "n_neighs": 6,
+        "n_rings": 1,
+        "edges": 15580
+      }
+    },
+    "seqfish": {
+      "spatial_neighbors": {
+        "coord_type": "generic",
+        "n_neighs": 6,
+        "edges": 116496
+      }
+    }
+  },
+  "gene_selection": {
+    "attr": "X",
+    "genes_argument": null,
+    "squidpy_default": "Use adata.var['highly_variable'] when present.",
+    "highly_variable_count": 4000
+  },
+  "labels": {
+    "vocabulary_json": "squidpy_label_vocabulary.json",
+    "visium_cluster_key": "cluster",
+    "visium_cluster_labels": [
+      "Cortex_1",
+      "Cortex_2",
+      "Cortex_3",
+      "Cortex_4",
+      "Cortex_5",
+      "Fiber_tract",
+      "Hippocampus",
+      "Hypothalamus_1",
+      "Hypothalamus_2",
+      "Lateral_ventricle",
+      "Pyramidal_layer",
+      "Pyramidal_layer_dentate_gyrus",
+      "Striatum",
+      "Thalamus_1",
+      "Thalamus_2"
+    ],
+    "seqfish_cluster_key": "celltype_mapped_refined",
+    "seqfish_cluster_labels": [
+      "Allantois",
+      "Anterior somitic tissues",
+      "Cardiomyocytes",
+      "Cranial mesoderm",
+      "Definitive endoderm",
+      "Dermomyotome",
+      "Endothelium",
+      "Erythroid",
+      "Forebrain/Midbrain/Hindbrain",
+      "Gut tube",
+      "Haematoendothelial progenitors",
+      "Intermediate mesoderm",
+      "Lateral plate mesoderm",
+      "Low quality",
+      "Mixed mesenchymal mesoderm",
+      "Neural crest",
+      "NMP",
+      "Presomitic mesoderm",
+      "Sclerotome",
+      "Spinal cord",
+      "Splanchnic mesoderm",
+      "Surface ectoderm"
+    ]
+  },
+  "neighborhood": {
+    "nhood_ranked_tsv": "visium_hne_nhood_enrichment_ranked.tsv",
+    "centrality_tsv": "visium_hne_centrality_scores.tsv",
+    "cooccurrence_tsv": "visium_hne_cooccurrence_curves.tsv",
+    "interaction_matrix_tsv": "visium_hne_interaction_matrix.tsv",
+    "nhood_n_perms": 100,
+    "cooccurrence_intervals": 25,
+    "top20_nhood_pairs": [
+      "Hippocampus|Pyramidal_layer",
+      "Cortex_4|Cortex_5",
+      "Hippocampus|Pyramidal_layer_dentate_gyrus",
+      "Lateral_ventricle|Striatum",
+      "Fiber_tract|Lateral_ventricle",
+      "Fiber_tract|Hypothalamus_2",
+      "Cortex_1|Cortex_4",
+      "Cortex_2|Cortex_5",
+      "Cortex_1|Cortex_3",
+      "Hypothalamus_2|Thalamus_1",
+      "Pyramidal_layer|Pyramidal_layer_dentate_gyrus",
+      "Fiber_tract|Hippocampus",
+      "Cortex_5|Lateral_ventricle",
+      "Hypothalamus_2|Thalamus_2",
+      "Hippocampus|Lateral_ventricle",
+      "Hypothalamus_2|Pyramidal_layer_dentate_gyrus",
+      "Lateral_ventricle|Pyramidal_layer",
+      "Cortex_3|Fiber_tract",
+      "Hypothalamus_2|Pyramidal_layer",
+      "Cortex_2|Striatum"
+    ],
+    "known_spatial_pair": "Hippocampus|Pyramidal_layer"
+  },
+  "autocorrelation": {
+    "moran": {
+      "ranked_tsv": "visium_hne_moran_ranked.tsv",
+      "ranking_direction": "descending",
+      "statistic_column": "moran_i",
+      "top20_genes": [
+        "Nrgn",
+        "Mbp",
+        "Camk2n1",
+        "Slc17a7",
+        "Ttr",
+        "Prkcd",
+        "Pmch",
+        "Fth1",
+        "Mobp",
+        "Cck",
+        "Agrp",
+        "Tcf7l2",
+        "Ddn",
+        "Olfm1",
+        "Agt",
+        "Tnnt1",
+        "Sparc",
+        "Nptxr",
+        "Plp1",
+        "Hcrt"
+      ],
+      "olfm1": 0.7632913155,
+      "plp1": 0.7476597898
+    },
+    "geary": {
+      "ranked_tsv": "visium_hne_geary_ranked.tsv",
+      "ranking_direction": "ascending",
+      "statistic_column": "geary_c",
+      "top20_genes": [
+        "Nrgn",
+        "Mbp",
+        "Camk2n1",
+        "Slc17a7",
+        "Ttr",
+        "Prkcd",
+        "Pmch",
+        "Agrp",
+        "Fth1",
+        "Mobp",
+        "Cck",
+        "Tcf7l2",
+        "Ddn",
+        "Olfm1",
+        "Agt",
+        "Tnnt1",
+        "Sparc",
+        "Nptxr",
+        "Hcrt",
+        "Plp1"
+      ]
+    }
+  },
+  "spatial_patterns": {
+    "ripley_tsv": "seqfish_ripley_l_curves.tsv",
+    "svg_summary_json": "visium_hne_svg_summary.json",
+    "localization_tsv": "visium_hne_gene_localization.tsv",
+    "ripley_mode": "L",
+    "ripley_n_simulations": 20,
+    "ripley_n_observations": 1000,
+    "ripley_n_steps": 25,
+    "ripley_labels": [
+      "Allantois",
+      "Anterior somitic tissues",
+      "Cardiomyocytes",
+      "Cranial mesoderm",
+      "Definitive endoderm",
+      "Dermomyotome",
+      "Endothelium",
+      "Erythroid",
+      "Forebrain/Midbrain/Hindbrain",
+      "Gut tube",
+      "Haematoendothelial progenitors",
+      "Intermediate mesoderm",
+      "Lateral plate mesoderm",
+      "Low quality",
+      "Mixed mesenchymal mesoderm",
+      "Neural crest",
+      "NMP",
+      "Presomitic mesoderm",
+      "Sclerotome",
+      "Spinal cord",
+      "Splanchnic mesoderm",
+      "Surface ectoderm"
+    ],
+    "svg_fdr_count": 3515,
+    "localization_genes": [
+      "Olfm1",
+      "Ttr",
+      "Nrgn",
+      "Plp1"
+    ]
+  },
+  "image_features": {
+    "feature_matrix_tsv": "visium_hne_image_feature_matrix.tsv",
+    "feature_clusters_tsv": "visium_hne_image_feature_clusters.tsv",
+    "feature_ranking_tsv": "visium_hne_image_feature_ranking.tsv",
+    "feature_summary_json": "visium_hne_image_feature_summary.json",
+    "n_observations": 2688,
+    "n_features": 26,
+    "segmentation_feature_count": 5,
+    "cluster_counts": {
+      "image_cluster_0": 779,
+      "image_cluster_1": 1015,
+      "image_cluster_2": 43,
+      "image_cluster_3": 373,
+      "image_cluster_4": 478
+    },
+    "top10_features_by_cluster_f": [
+      "segmentation_label",
+      "texture_ch-0_contrast_dist-1_angle-0.00",
+      "summary_ch-2_quantile-0.9",
+      "summary_ch-2_std",
+      "histogram_ch-0_bin-1",
+      "segmentation_ch-0_mean_intensity_mean",
+      "histogram_ch-0_bin-2",
+      "histogram_ch-0_bin-3",
+      "texture_ch-0_homogeneity_dist-1_angle-0.00",
+      "summary_ch-0_std"
+    ],
+    "recipe": {
+      "features": [
+        "histogram",
+        "segmentation",
+        "summary",
+        "texture"
+      ],
+      "segmentation": "sq.im.segment(..., method='watershed', channel=0)",
+      "spot_scale": 1.0,
+      "kmeans_clusters": 5,
+      "kmeans_random_state": 0
+    }
+  },
+  "ligrec": {
+    "ranked_tsv": "visium_hne_ligrec_ranked.tsv",
+    "summary_json": "visium_hne_ligrec_summary.json",
+    "custom_interactions": "papers/squidpy_spatial/data/ligrec_interactions.tsv",
+    "top20_interactions": [
+      "APOE|LRP1|Lateral_ventricle->Pyramidal_layer",
+      "APOE|LRP1|Lateral_ventricle->Lateral_ventricle",
+      "APOE|LRP1|Lateral_ventricle->Cortex_4",
+      "APOE|LRP1|Lateral_ventricle->Thalamus_2",
+      "APOE|LRP1|Lateral_ventricle->Striatum",
+      "APOE|LRP1|Lateral_ventricle->Cortex_2",
+      "APOE|LRP1|Lateral_ventricle->Cortex_1",
+      "APOE|LRP1|Lateral_ventricle->Hypothalamus_1",
+      "APOE|LRP1|Lateral_ventricle->Cortex_3",
+      "APOE|LRP1|Lateral_ventricle->Cortex_5",
+      "APOE|LRP1|Lateral_ventricle->Hypothalamus_2",
+      "APOE|LRP1|Lateral_ventricle->Thalamus_1",
+      "APOE|LRP1|Lateral_ventricle->Pyramidal_layer_dentate_gyrus",
+      "APOE|LRP1|Cortex_5->Pyramidal_layer",
+      "APOE|LRP1|Fiber_tract->Pyramidal_layer",
+      "APOE|LRP1|Cortex_5->Lateral_ventricle",
+      "APOE|LRP1|Lateral_ventricle->Hippocampus",
+      "APOE|LRP1|Cortex_5->Cortex_4",
+      "APOE|LRP1|Fiber_tract->Lateral_ventricle",
+      "APOE|LRP1|Cortex_5->Thalamus_2"
+    ],
+    "significant_count_p_le_0_05": 6
+  }
+}

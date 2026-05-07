@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import random
 from collections import Counter
@@ -23,17 +24,54 @@ class GradeRecord:
     metadata: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class BlindedReviewResponse:
+    """One completed human response from a blinded review packet."""
+
+    example_id: str
+    rater_id: str
+    human_score: int
+    note: str = ""
+
+
 @dataclass
 class ReliabilitySummary:
     """Aggregated reliability metrics."""
 
-    krippendorff_alpha: float
-    bootstrap_ci_low: float
-    bootstrap_ci_high: float
+    krippendorff_alpha: float | None
+    bootstrap_ci_low: float | None
+    bootstrap_ci_high: float | None
     items_scored: int
     raters_per_item_min: int
     raters_per_item_max: int
     judge_exact_match: dict[str, float]
+
+
+_BLINDED_PACKET_VISIBLE_FIELDS: tuple[str, ...] = (
+    "example_id",
+    "paper_id",
+    "leaf_id",
+    "category",
+    "requirement",
+    "grading_notes",
+    "evidence_quote",
+    "judge_reality",
+)
+
+_BLINDED_PACKET_HIDDEN_FIELDS: tuple[str, ...] = (
+    "run_id",
+    "sample_id",
+    "judge_model",
+    "judge_score",
+    "provisional_human_score",
+    "provisional_note",
+)
+
+_BLINDED_PACKET_RESPONSE_FIELDS: dict[str, str] = {
+    "rater_id": "Identifier for the second human reviewer",
+    "human_score": "Binary human score to fill in: 1 for pass, 0 for fail",
+    "note": "Short free-text rationale from the second reviewer",
+}
 
 
 def load_grade_records(path: str | Path) -> list[GradeRecord]:
@@ -152,11 +190,16 @@ def summarize_reliability(
     """Build the main reliability summary."""
 
     value_sets = [list(record.human_scores.values()) for record in records if record.human_scores]
-    alpha = krippendorff_alpha_nominal(value_sets)
-    ci_low, ci_high = bootstrap_alpha_ci(
-        value_sets, n_bootstrap=n_bootstrap, confidence=confidence, seed=seed
-    )
     rater_counts = [len(values) for values in value_sets] or [0]
+    if value_sets and min(rater_counts) >= 2:
+        alpha = krippendorff_alpha_nominal(value_sets)
+        ci_low, ci_high = bootstrap_alpha_ci(
+            value_sets, n_bootstrap=n_bootstrap, confidence=confidence, seed=seed
+        )
+    else:
+        alpha = None
+        ci_low = None
+        ci_high = None
     return ReliabilitySummary(
         krippendorff_alpha=alpha,
         bootstrap_ci_low=ci_low,
@@ -171,13 +214,23 @@ def summarize_reliability(
 def render_reliability_markdown(summary: ReliabilitySummary) -> str:
     """Render a markdown summary for the report."""
 
+    if summary.krippendorff_alpha is None:
+        alpha_line = "- Krippendorff's alpha: N/A (need >=2 human raters per item)"
+        ci_line = "- Bootstrap 95% CI: N/A"
+    else:
+        alpha_line = f"- Krippendorff's alpha: {summary.krippendorff_alpha:.3f}"
+        ci_line = (
+            f"- Bootstrap 95% CI: "
+            f"[{summary.bootstrap_ci_low:.3f}, {summary.bootstrap_ci_high:.3f}]"
+        )
+
     lines = [
         "# Judge Reliability",
         "",
         "## Human Agreement",
         "",
-        f"- Krippendorff's alpha: {summary.krippendorff_alpha:.3f}",
-        f"- Bootstrap 95% CI: [{summary.bootstrap_ci_low:.3f}, {summary.bootstrap_ci_high:.3f}]",
+        alpha_line,
+        ci_line,
         f"- Items scored: {summary.items_scored}",
         f"- Human raters per item: {summary.raters_per_item_min} to {summary.raters_per_item_max}",
         "",
@@ -190,6 +243,270 @@ def render_reliability_markdown(summary: ReliabilitySummary) -> str:
     else:
         lines.append("- No judge scores available yet.")
     return "\n".join(lines) + "\n"
+
+
+def build_blinded_review_packet(packet: dict[str, Any]) -> dict[str, Any]:
+    """Create a blinded second-rater packet from an annotated review packet."""
+
+    examples = packet.get("examples")
+    if not isinstance(examples, list):
+        raise ValueError("Review packet must contain an 'examples' list.")
+
+    blinded_examples: list[dict[str, Any]] = []
+    for example in examples:
+        blinded = {
+            field: example[field]
+            for field in _BLINDED_PACKET_VISIBLE_FIELDS
+            if field in example
+        }
+        blinded["response_template"] = {
+            "rater_id": "",
+            "human_score": None,
+            "note": "",
+        }
+        blinded_examples.append(blinded)
+
+    return {
+        "schema_version": packet.get("schema_version", "0.1.0"),
+        "description": (
+            "Blinded second-rater packet derived from an internal SciReplicBench review "
+            "packet. Judge outputs and provisional human grades are hidden to reduce bias."
+        ),
+        "source_description": packet.get("description", ""),
+        "hidden_fields": list(_BLINDED_PACKET_HIDDEN_FIELDS),
+        "response_fields": dict(_BLINDED_PACKET_RESPONSE_FIELDS),
+        "examples": blinded_examples,
+    }
+
+
+def blinded_review_packet_rows(packet: dict[str, Any]) -> list[dict[str, str]]:
+    """Flatten a blinded packet into rows suitable for CSV export."""
+
+    examples = packet.get("examples")
+    if not isinstance(examples, list):
+        raise ValueError("Blinded review packet must contain an 'examples' list.")
+
+    rows: list[dict[str, str]] = []
+    for example in examples:
+        response = example.get("response_template", {})
+        row = {
+            "example_id": str(example.get("example_id", "")),
+            "paper_id": str(example.get("paper_id", "")),
+            "leaf_id": str(example.get("leaf_id", "")),
+            "category": str(example.get("category", "")),
+            "requirement": str(example.get("requirement", "")),
+            "grading_notes": str(example.get("grading_notes", "")),
+            "evidence_quote": str(example.get("evidence_quote", "")),
+            "judge_reality": str(example.get("judge_reality", "")),
+            "rater_id": str(response.get("rater_id", "")),
+            "human_score": (
+                "" if response.get("human_score") is None else str(response.get("human_score"))
+            ),
+            "note": str(response.get("note", "")),
+        }
+        rows.append(row)
+    return rows
+
+
+def write_blinded_review_packet_outputs(
+    source_packet_path: str | Path,
+    *,
+    json_output_path: str | Path,
+    csv_output_path: str | Path,
+) -> dict[str, Any]:
+    """Read a review packet, write blinded JSON/CSV outputs, and return the JSON payload."""
+
+    packet = json.loads(Path(source_packet_path).read_text())
+    blinded = build_blinded_review_packet(packet)
+    Path(json_output_path).write_text(json.dumps(blinded, indent=2) + "\n")
+
+    rows = blinded_review_packet_rows(blinded)
+    fieldnames = [
+        "example_id",
+        "paper_id",
+        "leaf_id",
+        "category",
+        "requirement",
+        "grading_notes",
+        "evidence_quote",
+        "judge_reality",
+        "rater_id",
+        "human_score",
+        "note",
+    ]
+    with Path(csv_output_path).open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+    return blinded
+
+
+def _coerce_binary_human_score(value: Any, *, example_id: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{example_id}: human_score must be 0 or 1, not a boolean.")
+    if isinstance(value, int) and value in (0, 1):
+        return value
+    if isinstance(value, str) and value.strip() in {"0", "1"}:
+        return int(value.strip())
+    raise ValueError(f"{example_id}: human_score must be 0 or 1.")
+
+
+def _response_from_mapping(
+    mapping: dict[str, Any],
+    *,
+    example_id: str,
+    allow_incomplete: bool,
+) -> BlindedReviewResponse | None:
+    rater_id = str(mapping.get("rater_id", "")).strip()
+    score_value = mapping.get("human_score")
+    note = str(mapping.get("note", "")).strip()
+
+    score_blank = score_value is None or (
+        isinstance(score_value, str) and not score_value.strip()
+    )
+    if not rater_id and score_blank and not note:
+        if allow_incomplete:
+            return None
+        raise ValueError(f"{example_id}: response is incomplete.")
+    if not rater_id:
+        raise ValueError(f"{example_id}: rater_id is required.")
+    if score_blank:
+        raise ValueError(f"{example_id}: human_score is required.")
+
+    return BlindedReviewResponse(
+        example_id=example_id,
+        rater_id=rater_id,
+        human_score=_coerce_binary_human_score(score_value, example_id=example_id),
+        note=note,
+    )
+
+
+def blinded_review_responses_from_packet(
+    packet: dict[str, Any],
+    *,
+    allow_incomplete: bool = False,
+) -> list[BlindedReviewResponse]:
+    """Extract completed second-rater responses from a blinded JSON packet."""
+
+    examples = packet.get("examples")
+    if not isinstance(examples, list):
+        raise ValueError("Blinded review packet must contain an 'examples' list.")
+
+    responses: list[BlindedReviewResponse] = []
+    for example in examples:
+        if not isinstance(example, dict):
+            raise ValueError("Blinded review packet examples must be objects.")
+        example_id = str(example.get("example_id", "")).strip()
+        if not example_id:
+            raise ValueError("Blinded review packet example is missing example_id.")
+        response = example.get("response_template")
+        if not isinstance(response, dict):
+            raise ValueError(f"{example_id}: response_template is missing.")
+        parsed = _response_from_mapping(
+            response,
+            example_id=example_id,
+            allow_incomplete=allow_incomplete,
+        )
+        if parsed is not None:
+            responses.append(parsed)
+    return responses
+
+
+def blinded_review_responses_from_csv(
+    csv_path: str | Path,
+    *,
+    allow_incomplete: bool = False,
+) -> list[BlindedReviewResponse]:
+    """Extract completed second-rater responses from a blinded CSV packet."""
+
+    responses: list[BlindedReviewResponse] = []
+    with Path(csv_path).open(newline="") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            example_id = str(row.get("example_id", "")).strip()
+            if not example_id:
+                raise ValueError("Blinded review CSV row is missing example_id.")
+            parsed = _response_from_mapping(
+                dict(row),
+                example_id=example_id,
+                allow_incomplete=allow_incomplete,
+            )
+            if parsed is not None:
+                responses.append(parsed)
+    return responses
+
+
+def load_blinded_review_responses(
+    path: str | Path,
+    *,
+    allow_incomplete: bool = False,
+) -> list[BlindedReviewResponse]:
+    """Load completed second-rater responses from a blinded JSON or CSV packet."""
+
+    input_path = Path(path)
+    if input_path.suffix.lower() == ".csv":
+        return blinded_review_responses_from_csv(
+            input_path,
+            allow_incomplete=allow_incomplete,
+        )
+    packet = json.loads(input_path.read_text())
+    return blinded_review_responses_from_packet(
+        packet,
+        allow_incomplete=allow_incomplete,
+    )
+
+
+def merge_blinded_review_responses(
+    grade_payload: dict[str, Any],
+    responses: Iterable[BlindedReviewResponse],
+    *,
+    overwrite_existing: bool = False,
+) -> tuple[dict[str, Any], int]:
+    """Merge completed blinded-review responses into a human-grades payload."""
+
+    merged = json.loads(json.dumps(grade_payload))
+    records = merged.get("human_grades")
+    if not isinstance(records, list):
+        raise ValueError("Grade payload must contain a 'human_grades' list.")
+
+    records_by_example_id = {
+        str(record.get("example_id", "")): record
+        for record in records
+        if isinstance(record, dict)
+    }
+    merged_count = 0
+    for response in responses:
+        record = records_by_example_id.get(response.example_id)
+        if record is None:
+            raise ValueError(f"{response.example_id}: no matching grade record.")
+
+        human_scores = record.setdefault("human_scores", {})
+        if not isinstance(human_scores, dict):
+            raise ValueError(f"{response.example_id}: human_scores must be an object.")
+
+        existing_score = human_scores.get(response.rater_id)
+        if existing_score is not None and int(existing_score) != response.human_score:
+            if not overwrite_existing:
+                raise ValueError(
+                    f"{response.example_id}: rater {response.rater_id!r} already "
+                    "has a different score."
+                )
+        human_scores[response.rater_id] = response.human_score
+
+        metadata = record.setdefault("metadata", {})
+        if not isinstance(metadata, dict):
+            raise ValueError(f"{response.example_id}: metadata must be an object.")
+        metadata["provisional_single_rater"] = len(human_scores) < 2
+        if response.note:
+            notes = metadata.setdefault("human_review_notes", {})
+            if not isinstance(notes, dict):
+                raise ValueError(
+                    f"{response.example_id}: metadata.human_review_notes must be an object."
+                )
+            notes[response.rater_id] = response.note
+        merged_count += 1
+
+    return merged, merged_count
 
 
 def main() -> None:

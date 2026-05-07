@@ -1,0 +1,320 @@
+{
+  "schema_version": "0.1.0",
+  "description": "Blinded second-rater packet derived from an internal SciReplicBench review packet. Judge outputs and provisional human grades are hidden to reduce bias.",
+  "source_description": "Twenty-leaf review packet pairing the archived v0.1 false-positive Squidpy run (GaKiuf8G) with the stabilized live-judge Squidpy run (mZHU6eGr). Intended to help a second rater review the exact same leaves recorded in judge_eval/human_grades.json without reopening the raw .eval logs.",
+  "hidden_fields": [
+    "run_id",
+    "sample_id",
+    "judge_model",
+    "judge_score",
+    "provisional_human_score",
+    "provisional_note"
+  ],
+  "response_fields": {
+    "rater_id": "Identifier for the second human reviewer",
+    "human_score": "Binary human score to fill in: 1 for pass, 0 for fail",
+    "note": "Short free-text rationale from the second reviewer"
+  },
+  "examples": [
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/code_development/datasets_and_containers/load_visium_dataset",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/datasets_and_containers/load_visium_dataset",
+      "category": "code_development",
+      "requirement": "Load the official Visium H&E AnnData object from Squidpy and preserve its observation and variable metadata.",
+      "grading_notes": "The benchmark should use the official built-in dataset rather than a lookalike local export.",
+      "evidence_quote": "The benchmark should use the official built-in dataset rather than a lookalike local export.",
+      "judge_reality": "The submission includes a script named 'load_datasets.py' but does not explicitly state whether it uses the official Visium H&E dataset from Squidpy or a local lookalike.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/code_development/spatial_graph_neighbors/construct_geometry_aware_graph",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/spatial_graph_neighbors/construct_geometry_aware_graph",
+      "category": "code_development",
+      "requirement": "Construct a geometry-aware spatial graph appropriate to the benchmarked datasets.",
+      "grading_notes": "Grid-like and generic-coordinate data should not be treated identically without justification.",
+      "evidence_quote": "Grid-like and generic-coordinate data should not be treated identically without justification.",
+      "judge_reality": "The submitted scripts include efforts to load datasets, construct spatial graphs, compute image features, and statistics, but it is unclear if specific geometry-aware settings were applied or if grid-like and generic-coordinate data were treated appropriately and differently as required by the benchmark.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/code_development/spatial_statistics/run_moran_or_geary",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/spatial_statistics/run_moran_or_geary",
+      "category": "code_development",
+      "requirement": "Run Moran's I or Geary's C on one or more genes.",
+      "grading_notes": "At least one gene-level spatial-autocorrelation workflow is required.",
+      "evidence_quote": "The grading notes state: 'At least one gene-level spatial-autocorrelation workflow is required.'",
+      "judge_reality": "The submission includes scripts for loading datasets, constructing spatial graphs, computing image features, and a script named compute_statistics.py, but does not explicitly demonstrate the output of calculating Moran's I or Geary's C for any gene-level spatial autocorrelation.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/code_development/image_features_segmentation/compute_image_features",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/image_features_segmentation/compute_image_features",
+      "category": "code_development",
+      "requirement": "Compute one or more image-feature families such as summary, texture, or segmentation-derived features.",
+      "grading_notes": "The feature family should be named explicitly.",
+      "evidence_quote": "The feature family should be named explicitly.",
+      "judge_reality": "The submission includes a script for computing image features but does not specify the feature family that is being computed.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features",
+      "category": "code_development",
+      "requirement": "Compute segmentation-derived region properties or an equivalent cell-shape summary.",
+      "grading_notes": "The benchmark accepts pre-existing segmentation labels or benchmark-generated labels.",
+      "evidence_quote": "This README provides instructions on running the Squidpy spatial omics workflow for computational biology tasks. The workflow is designed to reproduce the analyses described in the associated benchmark paper.",
+      "judge_reality": "The submission contains scripts, including 'compute_image_features.py', which implies computation of image features, potentially including segmentation-derived properties.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes",
+      "category": "execution",
+      "requirement": "Load the benchmarked Visium dataset without fatal error.",
+      "grading_notes": "Warnings are acceptable if the resulting object is usable.",
+      "evidence_quote": "This README provides instructions on running the Squidpy spatial omics workflow for computational biology tasks. The workflow is designed to reproduce the analyses described in the associated benchmark paper.",
+      "judge_reality": "The submission includes a script intended to load the Visium dataset, but the execution results and outputs are not directly provided here for verification. Assuming the scripts are correctly implemented, it is expected that they comply with the requirement of loading the datasets without any fatal errors.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/execution/spatial_graph_neighbors/nhood_enrichment_written",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/execution/spatial_graph_neighbors/nhood_enrichment_written",
+      "category": "execution",
+      "requirement": "Write neighborhood-enrichment results to disk.",
+      "grading_notes": "Expected outputs include z-scores or an equivalent matrix.",
+      "evidence_quote": "Expected outputs include z-scores or an equivalent matrix.",
+      "judge_reality": "The submission did not provide any evidence of writing neighborhood-enrichment results, such as z-scores or an equivalent matrix, to disk.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/execution/spatial_statistics/moran_geary_written",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/execution/spatial_statistics/moran_geary_written",
+      "category": "execution",
+      "requirement": "Write spatial-autocorrelation results to disk.",
+      "grading_notes": "A ranked table is preferred.",
+      "evidence_quote": "Ranked table is preferred.",
+      "judge_reality": "The submission does not indicate that spatial-autocorrelation results were written to disk in a ranked table format.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/result_match/spatial_statistics/top_moran_genes_overlap_threshold",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/result_match/spatial_statistics/top_moran_genes_overlap_threshold",
+      "category": "result_match",
+      "requirement": "The top Moran-ranked genes reach rank-biased overlap of at least 0.65 against the hidden reference over the top 20 genes.",
+      "grading_notes": "Numeric-first comparator leaf.",
+      "evidence_quote": "The benchmark does not provide a rank-biased overlap metric for the top 20 genes computed from the benchmark Visium dataset against the reference.",
+      "judge_reality": "The submission computes the top Moran-ranked genes but does not provide a specific output regarding their rank-biased overlap with the hidden reference for the top 20 genes, thus failing to fulfill the requirement for this leaf.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "GaKiuf8G::squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold",
+      "category": "result_match",
+      "requirement": "The top Geary-ranked genes reach rank-biased overlap of at least 0.65 against the hidden reference over the top 20 genes.",
+      "grading_notes": "Numeric-first comparator leaf.",
+      "evidence_quote": "No results related to rank-biased overlap were found in the submission materials.",
+      "judge_reality": "The submission did not provide specific results regarding the rank-biased overlap of the top 20 Geary-ranked genes.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/code_development/datasets_and_containers/load_visium_dataset",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/datasets_and_containers/load_visium_dataset",
+      "category": "code_development",
+      "requirement": "Load the official Visium H&E AnnData object from Squidpy and preserve its observation and variable metadata.",
+      "grading_notes": "The benchmark should use the official built-in dataset rather than a lookalike local export.",
+      "evidence_quote": "adata = sq.datasets.visium_hne_adata()",
+      "judge_reality": "The provided code calls sq.datasets.visium_hne_adata() to load the Visium dataset and then uses its uns['image'] for subsequent image feature calculation. There is no modification shown to the dataset, implying that the metadata remains intact.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/code_development/spatial_graph_neighbors/construct_geometry_aware_graph",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/spatial_graph_neighbors/construct_geometry_aware_graph",
+      "category": "code_development",
+      "requirement": "Construct a geometry-aware spatial graph appropriate to the benchmarked datasets.",
+      "grading_notes": "Grid-like and generic-coordinate data should not be treated identically without justification.",
+      "evidence_quote": "sq.im.calculate_image_features(img, adata, features=\"segmentation\", key_added=\"segmentation_features\")",
+      "judge_reality": "The submission only loads the Visium dataset and computes image features. There is no code that creates a spatial-neighbor graph or sets geometry-aware parameters.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/code_development/spatial_statistics/run_moran_or_geary",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/spatial_statistics/run_moran_or_geary",
+      "category": "code_development",
+      "requirement": "Run Moran's I or Geary's C on one or more genes.",
+      "grading_notes": "At least one gene-level spatial-autocorrelation workflow is required.",
+      "evidence_quote": "geary_top20_rbo=0.90",
+      "judge_reality": "The provided pipeline only calculates image features, and there is no explicit computation of gene-level spatial autocorrelation in the code. Although an output file (geary_metrics.txt) is present with a geary metric value, there is no evidence in the implementation that this result was obtained through a proper spatial autocorrelation analysis workflow.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/code_development/image_features_segmentation/compute_image_features",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/image_features_segmentation/compute_image_features",
+      "category": "code_development",
+      "requirement": "Compute one or more image-feature families such as summary, texture, or segmentation-derived features.",
+      "grading_notes": "The feature family should be named explicitly.",
+      "evidence_quote": "sq.im.calculate_image_features(img, adata, features=\"segmentation\", key_added=\"segmentation_features\")",
+      "judge_reality": "The submission loads the image from adata.uns and computes image features by explicitly using the 'segmentation' feature family via the calculate_image_features function.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features",
+      "category": "code_development",
+      "requirement": "Compute segmentation-derived region properties or an equivalent cell-shape summary.",
+      "grading_notes": "The benchmark accepts pre-existing segmentation labels or benchmark-generated labels.",
+      "evidence_quote": "sq.im.calculate_image_features(img, adata, features=\"segmentation\", key_added=\"segmentation_features\")",
+      "judge_reality": "The submission\u2019s pipeline.py file calls squidpy\u2019s image feature computation function with features=\"segmentation\" and a key_added parameter to store the results, thus directly implementing the required segmentation feature extraction.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes",
+      "category": "execution",
+      "requirement": "Load the benchmarked Visium dataset without fatal error.",
+      "grading_notes": "Warnings are acceptable if the resulting object is usable.",
+      "evidence_quote": "sq.datasets.visium_hne_adata() completed with status 0",
+      "judge_reality": "The submission calls sq.datasets.visium_hne_adata() in pipeline.py and the run.log contains a confirmation message that the call completed successfully.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/execution/spatial_graph_neighbors/nhood_enrichment_written",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/execution/spatial_graph_neighbors/nhood_enrichment_written",
+      "category": "execution",
+      "requirement": "Write neighborhood-enrichment results to disk.",
+      "grading_notes": "Expected outputs include z-scores or an equivalent matrix.",
+      "evidence_quote": "geary_top20_rbo=0.90",
+      "judge_reality": "The submission only loads the Visium data and calculates image features, and it outputs a file (geary_metrics.txt) containing a geary metric value, which does not correspond to neighborhood enrichment results.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/execution/spatial_statistics/moran_geary_written",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/execution/spatial_statistics/moran_geary_written",
+      "category": "execution",
+      "requirement": "Write spatial-autocorrelation results to disk.",
+      "grading_notes": "A ranked table is preferred.",
+      "evidence_quote": "geary_top20_rbo=0.90",
+      "judge_reality": "The submission provided a file (/workspace/output/agent/geary_metrics.txt) containing the text 'geary_top20_rbo=0.90' as evidence of computed geary statistics, although no ranked table format was demonstrated.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/result_match/spatial_statistics/top_moran_genes_overlap_threshold",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/result_match/spatial_statistics/top_moran_genes_overlap_threshold",
+      "category": "result_match",
+      "requirement": "The top Moran-ranked genes reach rank-biased overlap of at least 0.65 against the hidden reference over the top 20 genes.",
+      "grading_notes": "Numeric-first comparator leaf.",
+      "evidence_quote": "geary_top20_rbo=0.90",
+      "judge_reality": "The submission provided a geary metric output instead of reporting any Moran metric.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    },
+    {
+      "example_id": "mZHU6eGr::squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold",
+      "paper_id": "squidpy_spatial",
+      "leaf_id": "squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold",
+      "category": "result_match",
+      "requirement": "The top Geary-ranked genes reach rank-biased overlap of at least 0.65 against the hidden reference over the top 20 genes.",
+      "grading_notes": "Numeric-first comparator leaf.",
+      "evidence_quote": "geary_top20_rbo=0.90",
+      "judge_reality": "The submission output includes a geary metric file with a value of 0.90 reported for the top20 geary-ranked genes.",
+      "response_template": {
+        "rater_id": "",
+        "human_score": null,
+        "note": ""
+      }
+    }
+  ]
+}

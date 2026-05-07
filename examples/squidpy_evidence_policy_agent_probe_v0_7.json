@@ -1,0 +1,107 @@
+{
+  "about": "Sanitized summary of the SciReplicBench v0.7 Squidpy agent evidence probe. This run uses the real squidpy_spatial paper bundle and scientific image, a frontier agent to author the sample artifacts, and a local mock judge so the evidence-policy outcome stays deterministic.",
+  "version": "v0.7",
+  "eval": {
+    "eval_id": "2dyMUnBGTwwHPN24NGPYeq",
+    "task": "squidpy_evidence_policy_agent_probe",
+    "task_args": {
+      "attempts": 1
+    },
+    "model": "openai/gpt-4o-mini",
+    "created": "2026-04-17T00:13:53+00:00"
+  },
+  "status": "success",
+  "stats": {
+    "started_at": "2026-04-17T00:13:54+00:00",
+    "completed_at": "2026-04-17T00:15:11+00:00",
+    "model_usage": {
+      "openai/gpt-4o-mini": {
+        "input_tokens": 31231,
+        "output_tokens": 1236,
+        "total_tokens": 37203,
+        "input_tokens_cache_write": null,
+        "input_tokens_cache_read": 4736,
+        "reasoning_tokens": 0,
+        "total_cost": null
+      }
+    }
+  },
+  "results_summary": {
+    "total_samples": 2,
+    "completed_samples": 2,
+    "scorer": "rubric_tree_scorer"
+  },
+  "samples": [
+    {
+      "sample_id": "squidpy_spatial_evidence_probe_prose_fail",
+      "overall_score": 0.0,
+      "explanation": "overall=0.000, code_development=0.000, execution=0.000, result_match=0.000",
+      "precheck": {
+        "ok": false,
+        "reason": "no Python file with a non-trivial function or module body was produced under /workspace/submission",
+        "nontrivial_py_files": 0,
+        "nontrivial_py_examples": [],
+        "output_artifact_count": 2,
+        "output_artifact_examples": [
+          "/workspace/output/agent/spatial_graph_metrics.json",
+          "/workspace/output/submission_manifest.json"
+        ]
+      },
+      "leaf_judgement_count": 65,
+      "leaf_judgements": [
+        {
+          "leaf_id": "squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features",
+          "score": 0,
+          "evidence_quote": "precheck_failed: no Python file with a non-trivial function or module body was produced under /workspace/submission"
+        },
+        {
+          "leaf_id": "squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes",
+          "score": 0,
+          "evidence_quote": "precheck_failed: no Python file with a non-trivial function or module body was produced under /workspace/submission"
+        },
+        {
+          "leaf_id": "squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold",
+          "score": 0,
+          "evidence_quote": "precheck_failed: no Python file with a non-trivial function or module body was produced under /workspace/submission"
+        }
+      ]
+    },
+    {
+      "sample_id": "squidpy_spatial_evidence_probe_control_pass",
+      "overall_score": 0.0,
+      "explanation": "overall=0.000, code_development=0.000, execution=0.000, result_match=0.000",
+      "precheck": {
+        "ok": false,
+        "reason": "no Python file with a non-trivial function or module body was produced under /workspace/submission",
+        "nontrivial_py_files": 0,
+        "nontrivial_py_examples": [],
+        "output_artifact_count": 0,
+        "output_artifact_examples": []
+      },
+      "leaf_judgement_count": 65,
+      "leaf_judgements": [
+        {
+          "leaf_id": "squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features",
+          "score": 0,
+          "evidence_quote": "precheck_failed: no Python file with a non-trivial function or module body was produced under /workspace/submission"
+        },
+        {
+          "leaf_id": "squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes",
+          "score": 0,
+          "evidence_quote": "precheck_failed: no Python file with a non-trivial function or module body was produced under /workspace/submission"
+        },
+        {
+          "leaf_id": "squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold",
+          "score": 0,
+          "evidence_quote": "precheck_failed: no Python file with a non-trivial function or module body was produced under /workspace/submission"
+        }
+      ]
+    }
+  ],
+  "notes": {
+    "judge_model": "mockllm/model",
+    "judge_type": "local mock judge",
+    "probe_type": "real-paper Squidpy frontier-agent harness",
+    "sandbox": "/Users/jak4013/Dropbox/Bioinformatics/Claude/SciReplicBench/scireplicbench/environments/compose.squidpy_spatial.yaml"
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "about": "Sanitized summary of a SciReplicBench v0.2 production run with the artifact-presence precheck active. The precheck failed for this submission (no non-trivial Python file under /workspace/submission), so every leaf was auto-zeroed without invoking the LLM judge.",
+  "version": "v0.2",
+  "eval": {
+    "eval_id": "4U6JfWEa8u9p78DgRh7LJU",
+    "task": "scireplicbench",
+    "task_args": {
+      "paper_id": "squidpy_spatial",
+      "attempts": 1,
+      "message_limit": null,
+      "time_limit_seconds": null,
+      "working_limit_seconds": null
+    },
+    "model": "openai/gpt-4o-mini",
+    "created": "2026-04-14T13:25:26+00:00"
+  },
+  "status": "success",
+  "stats": {
+    "started_at": "2026-04-14T13:25:26+00:00",
+    "completed_at": "2026-04-14T13:27:13+00:00",
+    "model_usage": {
+      "openai/gpt-4o-mini": {
+        "input_tokens": 10666,
+        "output_tokens": 1784,
+        "total_tokens": 137506,
+        "input_tokens_cache_read": 125056,
+        "reasoning_tokens": 0
+      }
+    }
+  },
+  "results_summary": {
+    "scorer": "rubric_tree_scorer",
+    "overall_score": 0.0,
+    "explanation": "overall=0.000, code_development=0.000, execution=0.000, result_match=0.000",
+    "category_scores": {
+      "code_development": 0.0,
+      "execution": 0.0,
+      "result_match": 0.0
+    },
+    "leaves_graded": 0,
+    "leaves_total": 65,
+    "judge_failures": 0,
+    "paper_id": "squidpy_spatial",
+    "judge_model": "openai/gpt-4o-mini"
+  },
+  "precheck": {
+    "ok": false,
+    "reason": "no Python file with a non-trivial function or module body was produced under /workspace/submission",
+    "nontrivial_py_files": 0,
+    "nontrivial_py_examples": [],
+    "output_artifact_count": 0,
+    "output_artifact_examples": []
+  },
+  "first_three_leaf_judgements": [
+    {
+      "leaf_id": "squidpy_spatial/code_development/datasets_and_containers/load_visium_dataset",
+      "score": 0,
+      "evidence_quote": "precheck_failed: no Python file with a non-trivial function or module body was produced under /workspace/submission"
+    },
+    {
+      "leaf_id": "squidpy_spatial/code_development/datasets_and_containers/load_seqfish_dataset",
+      "score": 0,
+      "evidence_quote": "precheck_failed: no Python file with a non-trivial function or module body was produced under /workspace/submission"
+    },
+    {
+      "leaf_id": "squidpy_spatial/code_development/datasets_and_containers/attach_spatial_coordinates",
+      "score": 0,
+      "evidence_quote": "precheck_failed: no Python file with a non-trivial function or module body was produced under /workspace/submission"
+    }
+  ],
+  "tool_call_profile": {
+    "message_limit": null,
+    "scratchpad_calls": 8,
+    "bash_calls": 11,
+    "python_calls": 0,
+    "total_tool_calls": 19
+  }
+}

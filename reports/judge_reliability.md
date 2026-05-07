@@ -2,11 +2,12 @@
 
 ## Human Agreement
 
-- Krippendorff's alpha: 1.000
-- Bootstrap 95% CI: [1.000, 1.000]
-- Items scored: 0
-- Human raters per item: 0 to 0
+- Krippendorff's alpha: N/A (need >=2 human raters per item)
+- Bootstrap 95% CI: N/A
+- Items scored: 20
+- Human raters per item: 1 to 1
 
 ## Judge Versus Human Majority
 
-- No judge scores available yet.
+- openai/gpt-4o-mini: 0.800 exact-match rate
+- openai/o3-mini: 0.900 exact-match rate

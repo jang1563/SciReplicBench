@@ -1,0 +1,17 @@
+source	target	family	note
+Apoe	Lrp1	lipoprotein	Public custom panel pair present in benchmark-pinned Visium.
+Ttr	Lrp2	transport	Public custom panel pair present in benchmark-pinned Visium.
+Spp1	Cd44	matrix	Public custom panel pair present in benchmark-pinned Visium.
+Ccl2	Ccr2	chemokine	Public custom panel pair present in benchmark-pinned Visium.
+Cxcl12	Cxcr4	chemokine	Public custom panel pair present in benchmark-pinned Visium.
+Fgf10	Fgfr2	growth_factor	Public custom panel pair present in benchmark-pinned Visium and seqFISH.
+Wnt5a	Fzd7	wnt	Public custom panel pair present in benchmark-pinned Visium.
+Bmp4	Bmpr1a	bmp	Public custom panel pair present in benchmark-pinned Visium.
+Notch1	Jag1	notch	Public custom panel pair present in benchmark-pinned Visium.
+Dlk1	Notch1	notch	Public custom panel pair present in benchmark-pinned Visium and seqFISH.
+Efnb2	Epha4	ephrin	Public custom panel pair present in benchmark-pinned Visium.
+Pdgfa	Pdgfra	growth_factor	Public custom panel pair present in benchmark-pinned Visium and seqFISH.
+Nrg1	Erbb4	neuregulin	Public custom panel pair present in benchmark-pinned Visium.
+Shh	Ptch1	hedgehog	Public custom panel pair present in benchmark-pinned Visium.
+Vegfa	Kdr	vegf	Public custom panel pair present in benchmark-pinned Visium.
+Kitl	Kit	stem_cell_factor	Public custom panel pair present in benchmark-pinned Visium.

@@ -12,11 +12,79 @@ from scireplicbench.judge import LeafJudgement
 from scireplicbench.scorers import (
     _artifact_presence_precheck,
     _has_nontrivial_body,
+    _has_nontrivial_workflow_source,
 )
 
 
 def _run(coro):
     return asyncio.run(coro)
+
+
+def _demo_rubric_payload() -> dict[str, object]:
+    return {
+        "paper_id": "demo",
+        "title": "Demo rubric",
+        "total_leaf_nodes": 3,
+        "rubric": {
+            "id": "demo/rubric",
+            "name": "Full Reproduction",
+            "weight": 1.0,
+            "is_leaf": False,
+            "children": [
+                {
+                    "id": "demo/code_development",
+                    "name": "Code Development",
+                    "weight": 0.30,
+                    "is_leaf": False,
+                    "children": [
+                        {
+                            "id": "demo/code_development/leaf_one",
+                            "name": "Leaf One",
+                            "weight": 1.0,
+                            "is_leaf": True,
+                            "requirement": "Do the first thing.",
+                            "grading_notes": "",
+                            "category": "code_development",
+                        }
+                    ],
+                },
+                {
+                    "id": "demo/execution",
+                    "name": "Execution",
+                    "weight": 0.30,
+                    "is_leaf": False,
+                    "children": [
+                        {
+                            "id": "demo/execution/leaf_two",
+                            "name": "Leaf Two",
+                            "weight": 1.0,
+                            "is_leaf": True,
+                            "requirement": "Do the second thing.",
+                            "grading_notes": "",
+                            "category": "execution",
+                        }
+                    ],
+                },
+                {
+                    "id": "demo/result_match",
+                    "name": "Result Match",
+                    "weight": 0.40,
+                    "is_leaf": False,
+                    "children": [
+                        {
+                            "id": "demo/result_match/leaf_three",
+                            "name": "Leaf Three",
+                            "weight": 1.0,
+                            "is_leaf": True,
+                            "requirement": "Recover the result.",
+                            "grading_notes": "",
+                            "category": "result_match",
+                        }
+                    ],
+                },
+            ],
+        },
+    }
 
 
 class NontrivialBodyTest(unittest.TestCase):
@@ -73,6 +141,14 @@ class NontrivialBodyTest(unittest.TestCase):
     def test_nontrivial_body_syntax_error(self) -> None:
         # unparseable; treat as non-executable
         self.assertFalse(_has_nontrivial_body("def f(:\n    pass\n"))
+
+    def test_nontrivial_shell_launcher_counts_as_workflow_source(self) -> None:
+        source = "#!/usr/bin/env bash\nset -euo pipefail\npython /workspace/submission/main.py\n"
+        self.assertTrue(_has_nontrivial_workflow_source("/workspace/submission/run.sh", source))
+
+    def test_placeholder_shell_launcher_is_not_workflow_source(self) -> None:
+        source = "#!/usr/bin/env bash\nset -euo pipefail\necho todo\ntouch out.txt\n"
+        self.assertFalse(_has_nontrivial_workflow_source("/workspace/submission/run.sh", source))
 
 
 @dataclass
@@ -135,8 +211,46 @@ class PrecheckFunctionTest(unittest.TestCase):
             result = _run(_artifact_presence_precheck())
         self.assertTrue(result["ok"])
         self.assertEqual(result["nontrivial_py_files"], 1)
+        self.assertEqual(result["nontrivial_source_files"], 1)
         self.assertEqual(result["nontrivial_py_examples"], ["/workspace/submission/analysis.py"])
+        self.assertEqual(result["nontrivial_source_examples"], ["/workspace/submission/analysis.py"])
         self.assertIsNone(result["reason"])
+
+    def test_precheck_can_require_output_artifact_for_result_match_tasks(self) -> None:
+        fake = _FakeSandbox(
+            py_paths=["/workspace/submission/analysis.py"],
+            files={
+                "/workspace/submission/analysis.py": (
+                    "def analyse(x):\n    y = x * 2\n    return y\n"
+                )
+            },
+            output_paths=[],
+        )
+        with self._patched(fake):
+            result = _run(_artifact_presence_precheck(require_output_artifact=True))
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["nontrivial_source_files"], 1)
+        self.assertEqual(result["output_artifact_count"], 0)
+        self.assertTrue(result["requires_output_artifact"])
+        self.assertIn("no non-document output artifacts", result["reason"])
+
+    def test_precheck_accepts_non_python_workflow_source(self) -> None:
+        fake = _FakeSandbox(
+            py_paths=["/workspace/submission/run.sh"],
+            files={
+                "/workspace/submission/run.sh": (
+                    "#!/usr/bin/env bash\n"
+                    "set -euo pipefail\n"
+                    "Rscript /workspace/submission/analysis.R\n"
+                )
+            },
+        )
+        with self._patched(fake):
+            result = _run(_artifact_presence_precheck())
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["nontrivial_py_files"], 0)
+        self.assertEqual(result["nontrivial_source_files"], 1)
+        self.assertEqual(result["nontrivial_source_examples"], ["/workspace/submission/run.sh"])
 
     def test_precheck_fails_when_only_output_artifact_present(self) -> None:
         # Zero .py files, but a CSV exists under /workspace/output.
@@ -185,70 +299,7 @@ class ScorerPrecheckIntegrationTest(unittest.TestCase):
         if not getattr(scorers, "_HAS_INSPECT_SCORING", False):
             self.skipTest("inspect-ai runtime not available")
 
-        rubric_payload = {
-            "paper_id": "demo",
-            "title": "Demo rubric",
-            "total_leaf_nodes": 3,
-            "rubric": {
-                "id": "demo/rubric",
-                "name": "Full Reproduction",
-                "weight": 1.0,
-                "is_leaf": False,
-                "children": [
-                    {
-                        "id": "demo/code_development",
-                        "name": "Code Development",
-                        "weight": 0.30,
-                        "is_leaf": False,
-                        "children": [
-                            {
-                                "id": "demo/code_development/leaf_one",
-                                "name": "Leaf One",
-                                "weight": 1.0,
-                                "is_leaf": True,
-                                "requirement": "Do the first thing.",
-                                "grading_notes": "",
-                                "category": "code_development",
-                            }
-                        ],
-                    },
-                    {
-                        "id": "demo/execution",
-                        "name": "Execution",
-                        "weight": 0.30,
-                        "is_leaf": False,
-                        "children": [
-                            {
-                                "id": "demo/execution/leaf_two",
-                                "name": "Leaf Two",
-                                "weight": 1.0,
-                                "is_leaf": True,
-                                "requirement": "Do the second thing.",
-                                "grading_notes": "",
-                                "category": "execution",
-                            }
-                        ],
-                    },
-                    {
-                        "id": "demo/result_match",
-                        "name": "Result Match",
-                        "weight": 0.40,
-                        "is_leaf": False,
-                        "children": [
-                            {
-                                "id": "demo/result_match/leaf_three",
-                                "name": "Leaf Three",
-                                "weight": 1.0,
-                                "is_leaf": True,
-                                "requirement": "Recover the result.",
-                                "grading_notes": "",
-                                "category": "result_match",
-                            }
-                        ],
-                    },
-                ],
-            },
-        }
+        rubric_payload = _demo_rubric_payload()
 
         precheck_failure = {
             "ok": False,
@@ -299,6 +350,203 @@ class ScorerPrecheckIntegrationTest(unittest.TestCase):
         for judgement in leaf_judgements:
             self.assertEqual(judgement["score"], 0)
             self.assertIn("precheck_failed", judgement["evidence_quote"])
+
+
+class ScorerEvidencePolicyIntegrationTest(unittest.TestCase):
+    """End-to-end scorer behaviour once precheck succeeds."""
+
+    def test_scorer_zeroes_prose_inflated_passes_after_precheck_success(self) -> None:
+        from scireplicbench import scorers
+
+        if not getattr(scorers, "_HAS_INSPECT_SCORING", False):
+            self.skipTest("inspect-ai runtime not available")
+
+        precheck_success = {
+            "ok": True,
+            "reason": None,
+            "nontrivial_py_files": 1,
+            "nontrivial_py_examples": ["/workspace/submission/pipeline.py"],
+            "output_artifact_count": 1,
+            "output_artifact_examples": ["/workspace/output/results.csv"],
+        }
+        reality = (
+            "Submission file list:\n"
+            "/workspace/submission/README.md\n"
+            "/workspace/submission/pipeline.py\n"
+            "/workspace/output/results.csv\n"
+            "\n--- /workspace/submission/README.md ---\n"
+            "This README provides instructions on running the Squidpy workflow.\n"
+            "\n--- /workspace/submission/pipeline.py ---\n"
+            "def run_pipeline():\n"
+            "    top20_overlap = 0.90\n"
+            "    return top20_overlap\n"
+        )
+        judge_mock = AsyncMock(
+            side_effect=[
+                LeafJudgement(
+                    leaf_id="demo/code_development/leaf_one",
+                    expectations="Write the code.",
+                    reality="Observed README prose.",
+                    evidence_quote="This README provides instructions on running the Squidpy workflow.",
+                    score=1,
+                ),
+                LeafJudgement(
+                    leaf_id="demo/execution/leaf_two",
+                    expectations="Run the code.",
+                    reality="Observed an output path.",
+                    evidence_quote="/workspace/output/results.csv",
+                    score=1,
+                ),
+                LeafJudgement(
+                    leaf_id="demo/result_match/leaf_three",
+                    expectations="Recover the metric.",
+                    reality="Observed a claimed metric in submission code.",
+                    evidence_quote="top20_overlap = 0.90",
+                    score=1,
+                ),
+            ]
+        )
+
+        state = SimpleNamespace(
+            metadata={"paper_id": "demo"},
+            sample_id="demo_main",
+            messages=[],
+        )
+        target = SimpleNamespace()
+        score_coro = scorers.rubric_tree_scorer(judge_model="openai/gpt-4o-mini")
+
+        with patch.object(scorers, "load_rubric_payload", return_value=_demo_rubric_payload()), patch.object(
+            scorers, "load_paper_summary", return_value="demo paper summary"
+        ), patch.object(scorers, "_collect_submission_context", AsyncMock(return_value=reality)), patch.object(
+            scorers, "_artifact_presence_precheck", AsyncMock(return_value=precheck_success)
+        ), patch.object(scorers, "_judge_leaf", judge_mock), patch.object(
+            scorers, "get_model", MagicMock(return_value=MagicMock())
+        ):
+            result = _run(score_coro(state, target))
+
+        self.assertEqual(judge_mock.await_count, 3)
+        self.assertEqual(result.metadata["precheck"]["ok"], True)
+        self.assertEqual(result.metadata["leaves_graded"], 3)
+        self.assertEqual(result.value, 0.0)
+
+        leaf_judgements = {
+            judgement["leaf_id"]: judgement for judgement in result.metadata["leaf_judgements"]
+        }
+        self.assertEqual(leaf_judgements["demo/code_development/leaf_one"]["score"], 0)
+        self.assertIn(
+            "README-style prose",
+            leaf_judgements["demo/code_development/leaf_one"]["evidence_quote"],
+        )
+        self.assertEqual(leaf_judgements["demo/execution/leaf_two"]["score"], 0)
+        self.assertIn(
+            "bare output-file path",
+            leaf_judgements["demo/execution/leaf_two"]["evidence_quote"],
+        )
+        self.assertEqual(leaf_judgements["demo/result_match/leaf_three"]["score"], 0)
+        self.assertIn(
+            "submission-side claims",
+            leaf_judgements["demo/result_match/leaf_three"]["evidence_quote"],
+        )
+
+    def test_scorer_preserves_valid_evidence_after_precheck_success(self) -> None:
+        from scireplicbench import scorers
+
+        if not getattr(scorers, "_HAS_INSPECT_SCORING", False):
+            self.skipTest("inspect-ai runtime not available")
+
+        precheck_success = {
+            "ok": True,
+            "reason": None,
+            "nontrivial_py_files": 1,
+            "nontrivial_py_examples": ["/workspace/submission/pipeline.py"],
+            "output_artifact_count": 2,
+            "output_artifact_examples": [
+                "/workspace/output/results.csv",
+                "/workspace/output/metrics.txt",
+            ],
+        }
+        reality = (
+            "Submission file list:\n"
+            "/workspace/submission/pipeline.py\n"
+            "/workspace/output/results.csv\n"
+            "/workspace/output/metrics.txt\n"
+            "\n--- /workspace/submission/pipeline.py ---\n"
+            "sq.gr.spatial_neighbors(adata, coord_type='grid')\n"
+            "\n--- /workspace/output/results.csv ---\n"
+            "command exited with status 0\n"
+            "\n--- /workspace/output/metrics.txt ---\n"
+            "top20_overlap=0.90\n"
+        )
+        judge_mock = AsyncMock(
+            side_effect=[
+                LeafJudgement(
+                    leaf_id="demo/code_development/leaf_one",
+                    expectations="Write the code.",
+                    reality="Observed real code.",
+                    evidence_quote="sq.gr.spatial_neighbors(adata, coord_type='grid')",
+                    score=1,
+                ),
+                LeafJudgement(
+                    leaf_id="demo/execution/leaf_two",
+                    expectations="Run the code.",
+                    reality="Observed runtime output.",
+                    evidence_quote="command exited with status 0",
+                    score=1,
+                ),
+                LeafJudgement(
+                    leaf_id="demo/result_match/leaf_three",
+                    expectations="Recover the metric.",
+                    reality="Observed output metric.",
+                    evidence_quote="top20_overlap=0.90",
+                    score=1,
+                ),
+            ]
+        )
+
+        state = SimpleNamespace(
+            metadata={"paper_id": "demo"},
+            sample_id="demo_main",
+            messages=[],
+        )
+        target = SimpleNamespace()
+        score_coro = scorers.rubric_tree_scorer(judge_model="openai/gpt-4o-mini")
+
+        with patch.object(scorers, "load_rubric_payload", return_value=_demo_rubric_payload()), patch.object(
+            scorers, "load_paper_summary", return_value="demo paper summary"
+        ), patch.object(scorers, "_collect_submission_context", AsyncMock(return_value=reality)), patch.object(
+            scorers, "_artifact_presence_precheck", AsyncMock(return_value=precheck_success)
+        ), patch.object(scorers, "_judge_leaf", judge_mock), patch.object(
+            scorers, "get_model", MagicMock(return_value=MagicMock())
+        ):
+            result = _run(score_coro(state, target))
+
+        self.assertEqual(judge_mock.await_count, 3)
+        self.assertEqual(result.metadata["precheck"]["ok"], True)
+        self.assertEqual(result.metadata["leaves_graded"], 3)
+        self.assertEqual(result.value, 1.0)
+
+        leaf_judgements = {
+            judgement["leaf_id"]: judgement for judgement in result.metadata["leaf_judgements"]
+        }
+        self.assertEqual(leaf_judgements["demo/code_development/leaf_one"]["score"], 1)
+        self.assertEqual(
+            leaf_judgements["demo/code_development/leaf_one"]["metadata"]["evidence_sources"][0][
+                "path"
+            ],
+            "/workspace/submission/pipeline.py",
+        )
+        self.assertEqual(leaf_judgements["demo/execution/leaf_two"]["score"], 1)
+        self.assertEqual(
+            leaf_judgements["demo/execution/leaf_two"]["metadata"]["evidence_sources"][0]["path"],
+            "/workspace/output/results.csv",
+        )
+        self.assertEqual(leaf_judgements["demo/result_match/leaf_three"]["score"], 1)
+        self.assertEqual(
+            leaf_judgements["demo/result_match/leaf_three"]["metadata"]["evidence_sources"][0][
+                "path"
+            ],
+            "/workspace/output/metrics.txt",
+        )
 
 
 if __name__ == "__main__":

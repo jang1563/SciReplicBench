@@ -1,0 +1,51 @@
+{
+  "datasets": {
+    "visium_hne_adata": {
+      "cluster_key": "cluster",
+      "cluster_labels": [
+        "Cortex_1",
+        "Cortex_2",
+        "Cortex_3",
+        "Cortex_4",
+        "Cortex_5",
+        "Fiber_tract",
+        "Hippocampus",
+        "Hypothalamus_1",
+        "Hypothalamus_2",
+        "Lateral_ventricle",
+        "Pyramidal_layer",
+        "Pyramidal_layer_dentate_gyrus",
+        "Striatum",
+        "Thalamus_1",
+        "Thalamus_2"
+      ]
+    },
+    "seqfish": {
+      "cluster_key": "celltype_mapped_refined",
+      "cluster_labels": [
+        "Allantois",
+        "Anterior somitic tissues",
+        "Cardiomyocytes",
+        "Cranial mesoderm",
+        "Definitive endoderm",
+        "Dermomyotome",
+        "Endothelium",
+        "Erythroid",
+        "Forebrain/Midbrain/Hindbrain",
+        "Gut tube",
+        "Haematoendothelial progenitors",
+        "Intermediate mesoderm",
+        "Lateral plate mesoderm",
+        "Low quality",
+        "Mixed mesenchymal mesoderm",
+        "Neural crest",
+        "NMP",
+        "Presomitic mesoderm",
+        "Sclerotome",
+        "Spinal cord",
+        "Splanchnic mesoderm",
+        "Surface ectoderm"
+      ]
+    }
+  }
+}

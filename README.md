@@ -16,6 +16,8 @@ Agents operate inside a Docker sandbox, write and execute code, install packages
 
 The inclusion of one external paper (`squidpy_spatial`) anchors judge reliability against work the author did not co-write; per-paper author relationships and the conflict-of-interest firewall are disclosed in [AUTHORSHIP.md](AUTHORSHIP.md).
 
+An additional internal harness, `evidence_policy_probe`, lives alongside the paper packages as a deterministic v0.4 validation task. It is not part of the three-paper benchmark lineup; its only job is to prove that the shipped scorer emits `evidence_policy_failed` in a real Inspect run once precheck succeeds.
+
 ---
 
 ## Design highlights
@@ -31,12 +33,13 @@ The inclusion of one external paper (`squidpy_spatial`) anchors judge reliabilit
 
 ## Repository layout
 
-```
+```text
 scireplicbench/
 ├── papers/                         # rubric + task definitions per paper
 │   ├── inspiration4_multiome/
 │   ├── squidpy_spatial/
-│   └── genelab_benchmark/
+│   ├── genelab_benchmark/
+│   └── evidence_policy_probe/      # internal v0.4 scorer-validation harness
 ├── src/scireplicbench/             # Inspect task, scorers, judge, comparators, reproducer
 ├── environments/                   # Dockerfile + per-paper Compose files
 ├── configs/                        # pilot / production run plans, runtime.env.example
@@ -72,6 +75,8 @@ pytest
 
 Running the benchmark itself requires Docker, an Inspect-compatible model provider configured in `configs/runtime.env`, and per-paper data staged via each paper's `papers/<paper>/data/prepare_data.sh`.
 
+Current staging status: `inspiration4_multiome` now builds its scientific image and `papers/inspiration4_multiome/data/prepare_data.sh` stages both the public `inspiration4-omics` repository under `papers/inspiration4_multiome/data/raw/` and the public `OSD-570`/`GLDS-562` processed files under `papers/inspiration4_multiome/data/cache/osdr_public/`. Those public downloads are useful DEG/DAR tables plus ISA metadata, but the benchmark-ready AnnData or MuData cache under `papers/inspiration4_multiome/data/cache/` is still required before a real production eval can run. `genelab_benchmark` now also builds its scientific image, and `papers/genelab_benchmark/data/prepare_data.sh` stages both the public `GeneLab_benchmark` repository and the public Hugging Face `A*_lomo` feature matrices with Git LFS materialization. The latest April 22, 2026 GeneLab reruns also showed that the package is past the old sample-ID/index trap: one run now loads fold data with `index_col=0`, aligns `X`/`y`, and writes a real `lomo/summary.tsv`. The current blocker is narrower and more structural: turning that real-but-toy artifact into benchmark-shaped multi-fold outputs without oscillating back into debug-only scripts. The next improvement there should come from a stronger task scaffold, not more prompt wording alone.
+
 For a fast end-to-end runtime check, you can point tasks at the lightweight smoke sandbox instead of the paper-specific scientific image:
 
 ```bash
@@ -82,6 +87,46 @@ SCIREPLICBENCH_ENV_VARIANT=smoke python -m inspect_ai eval \
   --message-limit 5 \
   --time-limit 600 \
   --working-limit 600
+```
+
+For the deterministic v0.4 scorer-validation harness that proves `evidence_policy_failed` on a live Inspect run:
+
+```bash
+.venv/bin/python scripts/run_evidence_policy_probe.py
+```
+
+For the deterministic v0.5 Squidpy-paper probe that uses the real `squidpy_spatial` bundle and scientific image:
+
+```bash
+.venv/bin/python scripts/run_evidence_policy_probe.py --probe squidpy
+```
+
+For the v1.2 frontier-agent Squidpy-paper probe that keeps the real paper package but lets `gpt-4o-mini` author the artifacts:
+
+```bash
+.venv/bin/python scripts/run_evidence_policy_probe.py --probe squidpy-agent --model openai/gpt-4o-mini
+```
+
+For the matching Sonnet v1.2 artifact:
+
+```bash
+.venv/bin/python scripts/run_evidence_policy_probe.py --probe squidpy-agent --model anthropic/claude-sonnet-4-6 --artifact-label sonnet
+```
+
+For the matching Haiku v1.2 artifact:
+
+```bash
+.venv/bin/python scripts/run_evidence_policy_probe.py --probe squidpy-agent --model anthropic/claude-haiku-4-5 --artifact-label haiku
+```
+
+For the first live-judge extension of the same probe using `gpt-4o-mini` as the judge:
+
+```bash
+.venv/bin/python scripts/run_evidence_policy_probe.py \
+  --probe squidpy-agent \
+  --model openai/gpt-4o-mini \
+  --judge-model openai/gpt-4o-mini \
+  --artifact-label judge_gpt4o_mini
 ```
 
 ---
@@ -99,7 +144,7 @@ Skeleton plans for each phase live under `configs/` and `reports/phase4{a,b}_*`.
 
 ## Framing
 
-SciReplicBench measures **computational reproducibility of published findings** — not exact bit-level replication. Where the original paper used R/Seurat or another non-Python stack, the rubric targets the Python/scanpy-equivalent workflow and documents acceptable method substitutes in each paper's `method_equivalence.md`. Each paper also includes a `novel_contrast.json` that specifies a held-out contrast or annotation not present in the source paper, as an anti-memorization control for frontier models whose training data likely includes the original tutorials.
+SciReplicBench measures **computational reproducibility of published findings** rather than exact bit-level replication. Where the original paper used R/Seurat or another non-Python stack, the rubric targets the Python/scanpy-equivalent workflow and documents acceptable method substitutes in each paper's `method_equivalence.md`. Each paper also includes a `novel_contrast.json` that specifies a held-out contrast or annotation not present in the source paper, as an anti-memorization control for frontier models whose training data likely includes the original tutorials.
 
 v1 is intended as a methodology prototype on three papers, not a general-purpose benchmark; scaling beyond three papers is explicit future work.
 

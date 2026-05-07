@@ -16,7 +16,7 @@ The package should remain public and reviewer-runnable. That means the default r
 
 ## Data Model
 
-The research summary defines the benchmark scale as:
+The research summary defines the original public benchmark scale as:
 
 - **6 tissues**
 - **17 ISS missions**
@@ -24,6 +24,8 @@ The research summary defines the benchmark scale as:
 - **~450 samples**
 - binary **Flight vs Ground** labels
 - more than **25 evaluation tasks** across multiple categories
+
+For the cached SciReplicBench reviewer path, the ready-to-run feature-matrix snapshot is narrower: it currently exposes fold-organized `A*_lomo` matrices for four tissues (`A2_gastrocnemius_lomo`, `A4_thymus_lomo`, `A5_skin_lomo`, and `A6_eye_lomo`). Agents should treat that staged snapshot as the primary execution target unless they explicitly regenerate or fetch additional benchmark assets.
 
 The benchmark uses NASA OSDR-derived mouse bulk RNA-seq data, but for SciReplicBench the main execution path should rely on the published feature matrices and metadata distributed through HuggingFace. This keeps the task portable and makes the benchmark more about scientific ML reasoning than about downloading large archives.
 
@@ -37,6 +39,21 @@ The first stage is to load the benchmark-ready feature matrices, metadata tables
 - a documented reproduction of the normalization/filtering workflow that yields comparable downstream performance.
 
 The critical point is that the agent preserves the train/test boundaries and does not leak information across missions or tissues.
+
+For the public reviewer path, the staged data layout is nested by fold rather than by flat tissue-level files. In practice, the agent should read paths like:
+
+- `data/huggingface_dataset/A2_gastrocnemius_lomo/fold_RR-1_test/train_X.csv`
+- `data/huggingface_dataset/A2_gastrocnemius_lomo/fold_RR-1_test/test_X.csv`
+- `data/raw/GeneLab_benchmark/tasks/A2_gastrocnemius_lomo/fold_RR-1_test/train_y.csv`
+- `data/raw/GeneLab_benchmark/tasks/A2_gastrocnemius_lomo/fold_RR-1_test/test_y.csv`
+- `data/raw/GeneLab_benchmark/tasks/A2_gastrocnemius_lomo/fold_RR-1_test/train_meta.csv`
+- `data/raw/GeneLab_benchmark/tasks/A2_gastrocnemius_lomo/fold_RR-1_test/test_meta.csv`
+
+The tissue root itself is only a container for `fold_*` subdirectories. There is no `labels.csv`, `train_X.csv`, or `test_X.csv` directly under `A*_lomo/`.
+
+Inside each fold, the sample IDs live in the first CSV column. In practice, the clean reviewer path is to load `train_X.csv`, `test_X.csv`, `train_y.csv`, and `test_y.csv` with `index_col=0`, use the single numeric column from `train_y.csv` / `test_y.csv` as the binary target vector, and align all tables by shared sample IDs before fitting. The `train_meta.csv` / `test_meta.csv` tables are useful for mission and tissue bookkeeping, but they should not be injected as raw numeric features into the baseline classifiers.
+
+The execution target should also stay benchmark-like rather than collapsing to one toy fold. Even a lightweight reviewer run should discover real `fold_*` directories, aggregate the folds it actually ran, and write machine-readable TSVs with computed rows. If some branches stay partial, the output should still be an honest structured status table, not a placeholder sentence. Likewise, AUROC should be computed from continuous model scores (`predict_proba`, `decision_function`, or equivalent) rather than hard class labels.
 
 ### 2. Category A: Spaceflight detection with LOMO validation
 

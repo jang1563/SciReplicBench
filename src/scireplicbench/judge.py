@@ -8,6 +8,8 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, Union
 
+from .workspace import workspace_path
+
 
 @dataclass
 class LeafJudgement:
@@ -42,6 +44,136 @@ JudgeClient = Callable[
 ]
 
 
+_LEAF_ALIGNMENT_PATTERNS: tuple[tuple[str, str], ...] = (
+    ("geary", "geary"),
+    ("moran", "moran"),
+    ("ripley", "ripley"),
+    ("nhood", "neighborhood-enrichment"),
+    ("neighborhood", "neighborhood-enrichment"),
+    ("enrichment", "neighborhood-enrichment"),
+    ("centrality", "centrality"),
+    ("interaction", "interaction"),
+    ("ligrec", "ligrec/interactions"),
+    ("ligand", "ligrec/interactions"),
+    ("receptor", "ligrec/interactions"),
+    ("co-occurrence", "co-occurrence"),
+    ("cooccurrence", "co-occurrence"),
+    ("texture", "texture"),
+    ("segmentation", "segmentation"),
+    ("region properties", "segmentation"),
+    ("cell-shape", "segmentation"),
+    ("image feature", "image features"),
+    ("image-feature", "image features"),
+    ("summary", "summary features"),
+    ("join", "join/alignment to observations"),
+    ("aligned to observations", "join/alignment to observations"),
+    ("aligned to observation", "join/alignment to observations"),
+    ("observations", "join/alignment to observations"),
+    ("adata", "AnnData/observation alignment"),
+    ("visium", "visium dataset"),
+    ("spatially variable", "spatially variable genes"),
+    ("svg", "spatially variable genes"),
+)
+
+
+def _evidence_policy_text(category: str) -> str:
+    submission_root = workspace_path("submission")
+    output_root = workspace_path("output")
+    if category == "code_development":
+        return (
+            "For code_development leaves, README text or planning prose is not valid "
+            "evidence. The evidence_quote must be copied from a "
+            f"`--- {submission_root}/... ---` content block that contains "
+            "agent-authored implementation code or configuration from submission "
+            "files. Do not quote output artifact text, file-list lines, README or "
+            "markdown text, task prose, or submission_manifest.json. If the "
+            "submission only describes what it would do, score 0."
+        )
+    if category == "execution":
+        return (
+            "For execution leaves, README text or planning prose is not valid "
+            "evidence. The evidence_quote must be copied from a "
+            f"`--- {output_root}/... ---` content block, usually an output "
+            "header, row, summary line, or runtime text showing that the requested "
+            "artifact family was actually produced. Do not quote bare output paths, "
+            "file-list lines, submission code, README or markdown text, task prose, "
+            "or submission_manifest.json. If execution is only described but not "
+            "evidenced, score 0."
+        )
+    if category == "result_match":
+        return (
+            "For result_match leaves, submission-side claims are not valid evidence. "
+            "The evidence_quote must be copied from a "
+            f"`--- {output_root}/... ---` content block containing "
+            "benchmark-comparable values from non-README output artifacts. Do not "
+            "quote bare paths, file-list lines, submission code, README or markdown "
+            "text, task prose, or submission_manifest.json. If a metric is only "
+            "asserted in code comments, README text, or planning prose, score 0."
+        )
+    return (
+        "Prefer concrete evidence from the observed submission or output artifacts. "
+        "Do not treat README promises as sufficient evidence of success."
+    )
+
+
+def _leaf_alignment_text(leaf: dict[str, Any]) -> str:
+    category = str(leaf.get("category", "unknown"))
+    output_root = workspace_path("output")
+    context = " ".join(
+        str(part)
+        for part in (
+            leaf.get("id", ""),
+            leaf.get("requirement", ""),
+            leaf.get("grading_notes", ""),
+        )
+    ).lower()
+
+    anchors: list[str] = []
+    for pattern, label in _LEAF_ALIGNMENT_PATTERNS:
+        if pattern in context and label not in anchors:
+            anchors.append(label)
+
+    lines = [
+        "The evidence must directly match the exact metric, artifact family, or pipeline step named by this leaf.",
+        "Do not give credit for adjacent steps or different analysis families just because the threshold, file format, or numeric value looks similar.",
+    ]
+    if category == "code_development":
+        lines.append(
+            "A generic compute call does not automatically satisfy adjacent steps such as joining, storing, aligning, or writing results unless the quote explicitly shows that step."
+        )
+        lines.append(
+            "This category grades implementation only: score 1 when the quoted submission source implements the core required behavior or an accepted documented equivalent, even if execution logs, output tables, hidden-reference comparisons, or result values are not visible in this prompt."
+        )
+        lines.append(
+            "Do not require README documentation, result-match success, or output artifact evidence for a code_development pass when the source code itself directly implements the leaf."
+        )
+    elif category == "execution":
+        lines.append(
+            "Execution evidence must correspond to the output family named by this leaf; a file or metric from one analysis family is not enough for another."
+        )
+        lines.append(
+            f"For execution leaves about written artifacts, score 1 when a {output_root} content block contains a header or row for the requested artifact family; do not require hidden-reference agreement."
+        )
+        lines.append(
+            "When runtime or output text explicitly names the exact dataset, function, or artifact family required by the leaf and shows successful completion, that output-side evidence can be sufficient even if the matching code excerpt is not visible."
+        )
+        lines.append(
+            "For execution leaves about written analysis outputs, a downstream benchmark-comparison score such as overlap, RBO, ARI, or correlation-to-reference is not enough unless the leaf explicitly asks for that comparator. Prefer the underlying analysis output or explicit runtime success for that output."
+        )
+    elif category == "result_match":
+        lines.append(
+            "Do not reuse one overlap, correlation, or ranked-metric value for a different analysis family. Evidence about Geary is not evidence about Moran, neighborhood-enrichment, ligrec, texture, centrality, or co-occurrence unless the quote explicitly names the same family as this leaf."
+        )
+
+    if anchors:
+        lines.append(
+            f"Expected analysis anchors for this leaf include: {', '.join(anchors)}. If the quote names a different family or omits these anchors, score 0."
+        )
+
+    lines.append("If the evidence is ambiguous, generic, or only indirectly related to the leaf, score 0.")
+    return " ".join(lines)
+
+
 def format_leaf_judge_prompt(
     leaf: dict[str, Any],
     *,
@@ -52,17 +184,24 @@ def format_leaf_judge_prompt(
     """Render a structured prompt for one rubric leaf."""
 
     comparator_block = comparator_guidance or "Use the leaf text and benchmark policy only."
+    category = str(leaf.get("category", "unknown"))
+    evidence_policy = _evidence_policy_text(category)
+    alignment_policy = _leaf_alignment_text(leaf)
     return (
         "You are grading one SciReplicBench rubric leaf.\n\n"
         "Paper summary:\n"
         f"{paper_summary.strip()}\n\n"
         "Leaf metadata:\n"
         f"- leaf_id: {leaf['id']}\n"
-        f"- category: {leaf.get('category', 'unknown')}\n"
+        f"- category: {category}\n"
         f"- requirement: {leaf.get('requirement', '').strip()}\n"
         f"- grading_notes: {leaf.get('grading_notes', '').strip()}\n\n"
         "Observed reality:\n"
         f"{reality_context.strip()}\n\n"
+        "Evidence policy:\n"
+        f"{evidence_policy}\n\n"
+        "Exact-leaf matching guardrails:\n"
+        f"{alignment_policy}\n\n"
         "Comparator guidance:\n"
         f"{comparator_block.strip()}\n\n"
         "Return exactly one JSON object with these keys in this order:\n"
@@ -71,8 +210,16 @@ def format_leaf_judge_prompt(
         "- expectations: summarize what passing requires for this leaf.\n"
         "- reality: summarize what the submission actually did.\n"
         "- evidence_quote: quote the specific supporting text or command output verbatim.\n"
+        "- Prefer a short exact line or a few exact adjacent lines; do not merge multi-line source into one invented line.\n"
+        "- Do not quote only a `--- path ---` content-block header; include concrete code or output content from below it.\n"
         "- score: 1 for pass, 0 for fail.\n"
+        "- For score 1, evidence_quote must appear verbatim in Observed reality.\n"
+        "- For score 0 when no valid quote exists, set evidence_quote to `no_valid_evidence`.\n"
+        "- Interpret words like `or` and `such as` literally; do not collapse alternatives into adjacent requirements.\n"
+        "- For code_development, a primary saved-source implementation can pass even when result-match evidence is absent.\n"
+        "- For execution, headers plus representative rows from output artifacts are valid evidence when they name the requested artifact family.\n"
         "- Do not omit evidence_quote.\n"
+        "- Do not infer unstated steps or substitute evidence from a different metric family.\n"
         "- Do not add markdown fences or commentary outside the JSON object."
     )
 
@@ -129,10 +276,6 @@ def parse_leaf_judgement(
     else:
         raise ValueError(f"Unsupported score value: {score_raw}")
 
-    evidence_quote = str(payload["evidence_quote"]).strip()
-    if not evidence_quote:
-        raise ValueError("Judge evidence_quote must be non-empty.")
-
     confidence = payload.get("confidence")
     if confidence is not None:
         confidence = float(confidence)
@@ -142,6 +285,15 @@ def parse_leaf_judgement(
         metadata = {}
     if not isinstance(metadata, dict):
         raise ValueError("Judge metadata must be an object when provided.")
+
+    evidence_quote = str(payload["evidence_quote"]).strip()
+    if not evidence_quote:
+        if score == 0:
+            evidence_quote = "no_valid_evidence"
+            metadata = dict(metadata)
+            metadata["empty_evidence_quote_repaired"] = True
+        else:
+            raise ValueError("Judge evidence_quote must be non-empty.")
 
     return LeafJudgement(
         leaf_id=leaf_id,

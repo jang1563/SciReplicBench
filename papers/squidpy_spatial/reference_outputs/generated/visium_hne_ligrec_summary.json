@@ -1,0 +1,8 @@
+{
+  "cluster_key": "cluster",
+  "custom_interactions": "papers/squidpy_spatial/data/ligrec_interactions.tsv",
+  "n_input_pairs": 16,
+  "n_perms": 100,
+  "significant_count_p_le_0_05": 6,
+  "rank_metric": "mean descending"
+}

@@ -2,7 +2,7 @@
   "paper_id": "squidpy_spatial",
   "title": "Squidpy: a scalable framework for spatial omics analysis",
   "doi": "10.1038/s41592-021-01358-2",
-  "total_leaf_nodes": 65,
+  "total_leaf_nodes": 58,
   "result_match_policy": {
     "dataset_snapshot_policy": "compare only against benchmark-pinned dataset and image manifests, not an unpinned live Squidpy installation",
     "metrics": {
@@ -267,6 +267,15 @@
                 "requirement": "Write a concise reproducible report summarizing datasets, graph settings, and key findings.",
                 "grading_notes": "Markdown, JSON, or YAML are all acceptable.",
                 "category": "code_development"
+              },
+              {
+                "id": "squidpy_spatial/code_development/interaction_reporting/seeded_permutation_pipeline",
+                "name": "Permutation-based pipeline is seeded",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "Set explicit RNG seeds for the permutation-based methods used in the submission so the analysis is reproducible across reruns.",
+                "grading_notes": "Deterministic comparator searches the submission source for an integer seed argument on `sq.gr.ligrec` and either a global seed call (np.random.seed / random.seed) or a `seed=` keyword on permutation methods. Operationalizes the Pineau ML reproducibility checklist seeding requirement.",
+                "category": "code_development"
               }
             ]
           }
@@ -285,30 +294,12 @@
             "is_leaf": false,
             "children": [
               {
-                "id": "squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes",
-                "name": "Visium dataset loads without fatal error",
+                "id": "squidpy_spatial/execution/datasets_and_containers/dataset_assets_loaded",
+                "name": "All benchmark dataset assets load with required schema",
                 "weight": 1.0,
                 "is_leaf": true,
-                "requirement": "Load the benchmarked Visium dataset without fatal error.",
-                "grading_notes": "Warnings are acceptable if the resulting object is usable.",
-                "category": "execution"
-              },
-              {
-                "id": "squidpy_spatial/execution/datasets_and_containers/seqfish_dataset_executes",
-                "name": "seqFISH dataset loads without fatal error",
-                "weight": 1.0,
-                "is_leaf": true,
-                "requirement": "Load the benchmarked generic-coordinate dataset without fatal error.",
-                "grading_notes": "The dataset must preserve labels and coordinates.",
-                "category": "execution"
-              },
-              {
-                "id": "squidpy_spatial/execution/datasets_and_containers/image_container_executes",
-                "name": "Image container loads without fatal error",
-                "weight": 1.0,
-                "is_leaf": true,
-                "requirement": "Load the image container and make it available for downstream feature extraction.",
-                "grading_notes": "The image may be lazy-loaded but must be usable later.",
+                "requirement": "Load Visium H&E, seqFISH, and Visium H&E image assets and emit a manifest exposing shape, cluster_key, and label vocabulary for each, plus image container sizes.",
+                "grading_notes": "Single gating leaf replacing per-dataset execute leaves (Q1). All three dataset assets must surface the required schema fields in dataset_manifest.json.",
                 "category": "execution"
               }
             ]
@@ -477,39 +468,21 @@
             "is_leaf": false,
             "children": [
               {
-                "id": "squidpy_spatial/result_match/datasets_and_containers/visium_shape_within_tolerance",
-                "name": "Visium shape within tolerance",
-                "weight": 1.0,
-                "is_leaf": true,
-                "requirement": "The loaded Visium H&E dataset has observation and gene counts within 1% of the official built-in dataset shape.",
-                "grading_notes": "Use the benchmark-pinned dataset manifest rather than a drifting library-version-dependent shape.",
-                "category": "result_match"
-              },
-              {
-                "id": "squidpy_spatial/result_match/datasets_and_containers/seqfish_shape_within_tolerance",
-                "name": "seqFISH shape within tolerance",
-                "weight": 1.0,
-                "is_leaf": true,
-                "requirement": "The loaded seqFISH dataset has observation and gene counts within 1% of the official built-in dataset shape.",
-                "grading_notes": "Use the benchmark-pinned dataset manifest rather than a drifting library-version-dependent shape.",
-                "category": "result_match"
-              },
-              {
-                "id": "squidpy_spatial/result_match/datasets_and_containers/image_shape_within_tolerance",
-                "name": "Image shape within tolerance",
-                "weight": 1.0,
-                "is_leaf": true,
-                "requirement": "The loaded Visium H&E image dimensions are within 2% of the benchmark reference image shape.",
-                "grading_notes": "This guards against loading the wrong image asset or a cropped surrogate.",
-                "category": "result_match"
-              },
-              {
                 "id": "squidpy_spatial/result_match/datasets_and_containers/label_vocabulary_matches_reference",
                 "name": "Label vocabulary matches reference",
                 "weight": 1.0,
                 "is_leaf": true,
                 "requirement": "The cluster or cell-type label vocabulary for the benchmark dataset matches the hidden reference after normalization.",
-                "grading_notes": "Ontology-style normalization of labels is allowed if a dataset uses synonyms.",
+                "grading_notes": "Deterministic comparator checks the Visium cluster label set recorded in dataset_manifest.json after lightweight label normalization.",
+                "category": "result_match"
+              },
+              {
+                "id": "squidpy_spatial/result_match/datasets_and_containers/dataset_assets_correct_shape",
+                "name": "All benchmark dataset assets match pinned shape",
+                "weight": 1.0,
+                "is_leaf": true,
+                "requirement": "All three benchmark assets \u2014 Visium H&E AnnData, seqFISH AnnData, and Visium H&E image \u2014 match their pinned reference shape within tolerance.",
+                "grading_notes": "Single gating leaf replacing per-asset shape leaves (Q1). All three asset shapes must lie within their pinned tolerance band.",
                 "category": "result_match"
               }
             ]
@@ -544,16 +517,7 @@
                 "weight": 1.0,
                 "is_leaf": true,
                 "requirement": "The ranked neighborhood-enrichment pairs reach rank-biased overlap of at least 0.65 against the hidden reference over the top 20 cluster pairs.",
-                "grading_notes": "Use the benchmark-standard neighborhood-enrichment ranking and pair normalization.",
-                "category": "result_match"
-              },
-              {
-                "id": "squidpy_spatial/result_match/spatial_graph_neighbors/positive_neighbor_pair_recovered",
-                "name": "Expected positive neighbor pair recovered",
-                "weight": 1.0,
-                "is_leaf": true,
-                "requirement": "At least one expected high-enrichment pair from the benchmark reference set is recovered among the top-ranked neighborhood pairs.",
-                "grading_notes": "The hidden reference set is derived from the paper's canonical spatial associations.",
+                "grading_notes": "Deterministic comparator uses the benchmark-standard Visium neighborhood-enrichment pair_key ranking.",
                 "category": "result_match"
               },
               {
@@ -562,7 +526,7 @@
                 "weight": 1.0,
                 "is_leaf": true,
                 "requirement": "The ranked centrality summary for the benchmark cell types or clusters reaches Spearman rho of at least 0.80 against the hidden reference.",
-                "grading_notes": "Compare the ordered centrality scores after aligning normalized cluster labels.",
+                "grading_notes": "Deterministic comparator aligns cluster labels and compares degree, average-clustering, and closeness centrality by Spearman correlation.",
                 "category": "result_match"
               },
               {
@@ -571,7 +535,7 @@
                 "weight": 1.0,
                 "is_leaf": true,
                 "requirement": "The benchmark co-occurrence curve reaches mean Pearson correlation of at least 0.85 against the hidden reference across the fixed benchmark radius grid.",
-                "grading_notes": "Use the benchmark's fixed radius grid and compare matched cluster-pair curves.",
+                "grading_notes": "Deterministic comparator compares matched pair_key co-occurrence curves across the benchmark fixed radius-index grid.",
                 "category": "result_match"
               },
               {
@@ -580,16 +544,7 @@
                 "weight": 1.0,
                 "is_leaf": true,
                 "requirement": "The cluster-interaction matrix or equivalent summary reaches Spearman rho of at least 0.80 against the hidden reference after vectorizing the upper triangle.",
-                "grading_notes": "Numeric-first comparator leaf.",
-                "category": "result_match"
-              },
-              {
-                "id": "squidpy_spatial/result_match/spatial_graph_neighbors/known_spatial_association_recovered",
-                "name": "Known spatial association recovered",
-                "weight": 1.0,
-                "is_leaf": true,
-                "requirement": "A benchmarked paper-consistent spatial association such as an embryonic lineage adjacency is recovered with the correct sign and ranking direction.",
-                "grading_notes": "The pair is benchmark-pinned and should appear among the top five positive neighborhood-enrichment pairs.",
+                "grading_notes": "Deterministic comparator vectorizes the benchmark upper-triangle interaction matrix by pair_key and compares counts by Spearman correlation.",
                 "category": "result_match"
               }
             ]
@@ -619,15 +574,6 @@
                 "category": "result_match"
               },
               {
-                "id": "squidpy_spatial/result_match/spatial_statistics/plp1_moran_close",
-                "name": "Plp1 Moran statistic close to reference",
-                "weight": 1.0,
-                "is_leaf": true,
-                "requirement": "The Moran's I value for Plp1 is within 0.05 of the benchmark reference value.",
-                "grading_notes": "The reference value is derived from the official tutorial output.",
-                "category": "result_match"
-              },
-              {
                 "id": "squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold",
                 "name": "Geary ranking overlap above threshold",
                 "weight": 1.0,
@@ -642,7 +588,7 @@
                 "weight": 1.0,
                 "is_leaf": true,
                 "requirement": "The benchmark Ripley statistic curve reaches Pearson correlation of at least 0.90 against the hidden reference across the fixed benchmark radius grid.",
-                "grading_notes": "Use the benchmark's fixed radius grid and matched statistic family.",
+                "grading_notes": "Deterministic comparator uses seqFISH Ripley L curves over the benchmark radius-index grid.",
                 "category": "result_match"
               },
               {
@@ -651,16 +597,16 @@
                 "weight": 1.0,
                 "is_leaf": true,
                 "requirement": "The number of significant spatially variable genes lies within 15% of the hidden reference after the benchmark-standard multiple-testing correction.",
-                "grading_notes": "Compare counts after the benchmark-standard multiple-testing correction.",
+                "grading_notes": "Deterministic comparator checks the Moran pval_norm_fdr_bh <= 0.05 significant-gene count in spatial_stats/svg_summary.json.",
                 "category": "result_match"
               },
               {
                 "id": "squidpy_spatial/result_match/spatial_statistics/spatial_localization_pattern_recovered",
-                "name": "Spatial localization pattern recovered",
+                "name": "Marker spatial localization pattern recovered (Olfm1, Ttr)",
                 "weight": 1.0,
                 "is_leaf": true,
-                "requirement": "At least one benchmarked top spatial gene shows the correct broad localization pattern against the hidden reference.",
-                "grading_notes": "This leaf is graded with region-wise Pearson correlation of at least 0.60 after benchmark-standard spatial binning, not free-form image matching.",
+                "requirement": "Both Olfm1 and Ttr show the correct cluster-wise mean-expression localization pattern against the hidden reference (Pearson per gene above 0.7).",
+                "grading_notes": "Deterministic comparator merges the previous Olfm1-only spatial localization leaf and the Ttr-only marker localization leaf into a single stricter check; both genes must pass per-group Pearson >= 0.7 against the hidden reference.",
                 "category": "result_match"
               }
             ]
@@ -677,7 +623,7 @@
                 "weight": 1.0,
                 "is_leaf": true,
                 "requirement": "The image-feature matrix has exact row alignment to the hidden reference and a feature count within 10% of the benchmark-pinned reference.",
-                "grading_notes": "Compare both row alignment and feature dimensionality.",
+                "grading_notes": "Deterministic comparator checks the benchmark-pinned Visium obs_id alignment and feature dimensionality from the standard Squidpy image-feature recipe.",
                 "category": "result_match"
               },
               {
@@ -686,7 +632,7 @@
                 "weight": 1.0,
                 "is_leaf": true,
                 "requirement": "The number of segmentation-derived features or labels lies within 20% of the hidden reference.",
-                "grading_notes": "The benchmark accepts either benchmark-generated or benchmark-supplied segmentation labels.",
+                "grading_notes": "Deterministic comparator uses the benchmark-pinned watershed segmentation recipe on the staged Visium H&E image.",
                 "category": "result_match"
               },
               {
@@ -695,7 +641,7 @@
                 "weight": 1.0,
                 "is_leaf": true,
                 "requirement": "Clustering based on image-derived features reaches ARI of at least 0.25 against hidden-reference transcriptomic clusters or benchmark image clusters.",
-                "grading_notes": "Numeric-first comparator leaf.",
+                "grading_notes": "Numeric-first comparator leaf; compares obs_id-aligned image-feature clusters against benchmark-generated image clusters with adjusted Rand index.",
                 "category": "result_match"
               },
               {
@@ -730,7 +676,7 @@
                 "weight": 1.0,
                 "is_leaf": true,
                 "requirement": "The ranked interaction pairs reach rank-biased overlap of at least 0.60 against the hidden reference over the top 20 interaction pairs.",
-                "grading_notes": "Numeric-first comparator leaf.",
+                "grading_notes": "Numeric-first comparator leaf using the staged public custom ligand-receptor panel at data/ligrec_interactions.tsv when offline OmniPath resources are unavailable.",
                 "category": "result_match"
               },
               {
@@ -739,16 +685,7 @@
                 "weight": 1.0,
                 "is_leaf": true,
                 "requirement": "The number of significant interaction pairs lies within 25% of the hidden reference after the benchmark-standard significance cutoff.",
-                "grading_notes": "Compare after the benchmark-standard significance cutoff.",
-                "category": "result_match"
-              },
-              {
-                "id": "squidpy_spatial/result_match/interaction_reporting/marker_localization_consistency",
-                "name": "Marker localization consistency recovered",
-                "weight": 1.0,
-                "is_leaf": true,
-                "requirement": "A benchmarked marker-gene spatial visualization is consistent with the hidden-reference localization summary.",
-                "grading_notes": "This uses region-wise Pearson correlation of at least 0.60 after benchmark-standard spatial binning, not free-form plot grading.",
+                "grading_notes": "Compare after the benchmark-standard p <= 0.05 cutoff using the staged public custom ligand-receptor panel and pinned permutation settings.",
                 "category": "result_match"
               }
             ]

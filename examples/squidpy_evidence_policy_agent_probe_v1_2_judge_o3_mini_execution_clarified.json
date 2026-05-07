@@ -1,0 +1,127 @@
+{
+  "about": "Sanitized summary of the SciReplicBench v1.2 Squidpy agent evidence probe. This run uses the real squidpy_spatial paper bundle and scientific image, a frontier agent to author the sample artifacts, and the live judge `openai/o3-mini` to test a live, non-mock leaf grader.",
+  "version": "v1.2-judge_o3_mini_execution_clarified",
+  "eval": {
+    "eval_id": "8rBAHDFCmZ4jADzYRZMhHc",
+    "task": "squidpy_evidence_policy_agent_probe",
+    "task_args": {
+      "attempts": 1,
+      "judge_model": "openai/o3-mini"
+    },
+    "model": "openai/gpt-4o-mini",
+    "created": "2026-04-17T17:33:34+00:00"
+  },
+  "status": "success",
+  "stats": {
+    "started_at": "2026-04-17T17:33:34+00:00",
+    "completed_at": "2026-04-17T17:42:12+00:00",
+    "model_usage": {
+      "openai/gpt-4o-mini": {
+        "input_tokens": 3886,
+        "output_tokens": 833,
+        "total_tokens": 5999,
+        "input_tokens_cache_write": null,
+        "input_tokens_cache_read": 1280,
+        "reasoning_tokens": 0,
+        "total_cost": null
+      },
+      "openai/o3-mini": {
+        "input_tokens": 163663,
+        "output_tokens": 153428,
+        "total_tokens": 317091,
+        "input_tokens_cache_write": null,
+        "input_tokens_cache_read": null,
+        "reasoning_tokens": 64128,
+        "total_cost": null
+      }
+    }
+  },
+  "results_summary": {
+    "total_samples": 2,
+    "completed_samples": 2,
+    "scorer": "rubric_tree_scorer"
+  },
+  "samples": [
+    {
+      "sample_id": "squidpy_spatial_evidence_probe_prose_fail",
+      "overall_score": 0.0,
+      "explanation": "overall=0.000, code_development=0.000, execution=0.000, result_match=0.000",
+      "precheck": {
+        "ok": true,
+        "reason": null,
+        "nontrivial_py_files": 1,
+        "nontrivial_py_examples": [
+          "/workspace/submission/pipeline.py"
+        ],
+        "output_artifact_count": 2,
+        "output_artifact_examples": [
+          "/workspace/output/agent/spatial_graph_metrics.json",
+          "/workspace/output/submission_manifest.json"
+        ]
+      },
+      "leaf_judgement_count": 65,
+      "leaf_judgements": [
+        {
+          "leaf_id": "squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features",
+          "score": 0,
+          "evidence_quote": "README: would compute segmentation-derived regionprops with sq.im.calculate_image_features(..., features=\"segmentation\")."
+        },
+        {
+          "leaf_id": "squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes",
+          "score": 0,
+          "evidence_quote": "return {\"result\": \"success\"}"
+        },
+        {
+          "leaf_id": "squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold",
+          "score": 0,
+          "evidence_quote": "# geary_top20_rbo=0.90"
+        }
+      ]
+    },
+    {
+      "sample_id": "squidpy_spatial_evidence_probe_control_pass",
+      "overall_score": 0.08682142857142858,
+      "explanation": "overall=0.087, code_development=0.140, execution=0.115, result_match=0.036",
+      "precheck": {
+        "ok": true,
+        "reason": null,
+        "nontrivial_py_files": 1,
+        "nontrivial_py_examples": [
+          "/workspace/submission/pipeline.py"
+        ],
+        "output_artifact_count": 3,
+        "output_artifact_examples": [
+          "/workspace/output/agent/geary_metrics.txt",
+          "/workspace/output/agent/run.log",
+          "/workspace/output/submission_manifest.json"
+        ]
+      },
+      "leaf_judgement_count": 65,
+      "leaf_judgements": [
+        {
+          "leaf_id": "squidpy_spatial/code_development/image_features_segmentation/compute_segmentation_features",
+          "score": 1,
+          "evidence_quote": "sq.im.calculate_image_features(img, adata, features=\"segmentation\", key_added=\"segmentation_features\")"
+        },
+        {
+          "leaf_id": "squidpy_spatial/execution/datasets_and_containers/visium_dataset_executes",
+          "score": 1,
+          "evidence_quote": "sq.datasets.visium_hne_adata() completed with status 0"
+        },
+        {
+          "leaf_id": "squidpy_spatial/result_match/spatial_statistics/geary_rank_overlap_threshold",
+          "score": 1,
+          "evidence_quote": "geary_top20_rbo=0.90"
+        }
+      ]
+    }
+  ],
+  "notes": {
+    "judge_model": "openai/o3-mini",
+    "judge_type": "live model judge",
+    "probe_type": "real-paper Squidpy frontier-agent harness",
+    "authoring_model": "openai/gpt-4o-mini",
+    "artifact_label": "judge_o3_mini_execution_clarified",
+    "sandbox": "/Users/jak4013/Dropbox/Bioinformatics/Claude/SciReplicBench/scireplicbench/environments/compose.squidpy_spatial.yaml"
+  }
+}

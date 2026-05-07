@@ -1,0 +1,343 @@
+{
+  "schema_version": 1,
+  "strict_execution": true,
+  "description": "Deterministic artifact/schema checks for Squidpy execution leaves. These checks verify that the submitted workflow actually wrote the offline benchmark contract before any LLM judge fallback.",
+  "leaves": {
+    "squidpy_spatial/execution/spatial_graph_neighbors/spatial_graph_written": {
+      "metric": "all_checks",
+      "checks": [
+        {
+          "metric": "json_numeric_min",
+          "artifact": "/workspace/output/agent/spatial_graph_metrics.json",
+          "json_path": [
+            "visium",
+            "spatial_neighbors",
+            "edges"
+          ],
+          "minimum": 1
+        },
+        {
+          "metric": "json_numeric_min",
+          "artifact": "/workspace/output/agent/spatial_graph_metrics.json",
+          "json_path": [
+            "seqfish",
+            "spatial_neighbors",
+            "edges"
+          ],
+          "minimum": 1
+        }
+      ]
+    },
+    "squidpy_spatial/execution/spatial_graph_neighbors/nhood_enrichment_written": {
+      "metric": "tsv_schema",
+      "artifact": "/workspace/output/agent/neighborhood/nhood_enrichment_ranked.tsv",
+      "required_columns": [
+        "rank",
+        "cluster_1",
+        "cluster_2",
+        "pair_key",
+        "zscore",
+        "count"
+      ],
+      "min_rows": 5
+    },
+    "squidpy_spatial/execution/spatial_graph_neighbors/centrality_or_interaction_written": {
+      "metric": "any_checks",
+      "checks": [
+        {
+          "metric": "tsv_schema",
+          "artifact": "/workspace/output/agent/neighborhood/centrality_scores.tsv",
+          "required_columns": [
+            "cluster",
+            "degree_centrality"
+          ],
+          "min_rows": 2
+        },
+        {
+          "metric": "tsv_schema",
+          "artifact": "/workspace/output/agent/neighborhood/interaction_matrix.tsv",
+          "required_columns": [
+            "cluster_1",
+            "cluster_2",
+            "pair_key",
+            "count"
+          ],
+          "min_rows": 2
+        }
+      ]
+    },
+    "squidpy_spatial/execution/spatial_graph_neighbors/cooccurrence_written": {
+      "metric": "tsv_schema",
+      "artifact": "/workspace/output/agent/neighborhood/cooccurrence_curves.tsv",
+      "required_columns": [
+        "cluster_1",
+        "cluster_2",
+        "pair_key",
+        "radius_index",
+        "radius_start",
+        "radius_end",
+        "cooccurrence"
+      ],
+      "min_rows": 25
+    },
+    "squidpy_spatial/execution/spatial_statistics/moran_geary_written": {
+      "metric": "all_checks",
+      "checks": [
+        {
+          "metric": "tsv_schema",
+          "artifact": "/workspace/output/agent/autocorrelation/moran_ranked.tsv",
+          "required_columns": [
+            "rank",
+            "gene",
+            "moran_i",
+            "pval_norm_fdr_bh"
+          ],
+          "min_rows": 20
+        },
+        {
+          "metric": "tsv_schema",
+          "artifact": "/workspace/output/agent/autocorrelation/geary_ranked.tsv",
+          "required_columns": [
+            "rank",
+            "gene",
+            "geary_c",
+            "pval_norm_fdr_bh"
+          ],
+          "min_rows": 20
+        }
+      ]
+    },
+    "squidpy_spatial/execution/spatial_statistics/top_svg_table_written": {
+      "metric": "all_checks",
+      "checks": [
+        {
+          "metric": "tsv_schema",
+          "artifact": "/workspace/output/agent/autocorrelation/moran_ranked.tsv",
+          "required_columns": [
+            "rank",
+            "gene",
+            "moran_i",
+            "pval_norm_fdr_bh"
+          ],
+          "min_rows": 20
+        },
+        {
+          "metric": "json_paths_present",
+          "artifact": "/workspace/output/agent/spatial_stats/svg_summary.json",
+          "json_paths": [
+            [
+              "significant_gene_count"
+            ],
+            [
+              "fdr_threshold"
+            ],
+            [
+              "method"
+            ]
+          ]
+        }
+      ]
+    },
+    "squidpy_spatial/execution/spatial_statistics/ripley_written": {
+      "metric": "tsv_schema",
+      "artifact": "/workspace/output/agent/spatial_stats/ripley_curves.tsv",
+      "required_columns": [
+        "label",
+        "radius_index",
+        "radius",
+        "ripley_l"
+      ],
+      "min_rows": 20
+    },
+    "squidpy_spatial/execution/spatial_statistics/spatial_stats_plot_written": {
+      "metric": "artifact_exists",
+      "artifact": "/workspace/output/agent/visualizations/spatial_stats_plot.svg",
+      "contains": [
+        "<svg",
+        "Top Moran"
+      ],
+      "min_bytes": 200
+    },
+    "squidpy_spatial/execution/image_features_segmentation/image_feature_job_executes": {
+      "metric": "all_checks",
+      "checks": [
+        {
+          "metric": "tsv_schema",
+          "artifact": "/workspace/output/agent/image_features/feature_matrix.tsv",
+          "required_columns": [
+            "obs_id"
+          ],
+          "min_rows": 100
+        },
+        {
+          "metric": "json_numeric_min",
+          "artifact": "/workspace/output/agent/image_features/feature_summary.json",
+          "json_path": [
+            "n_features"
+          ],
+          "minimum": 1
+        }
+      ]
+    },
+    "squidpy_spatial/execution/image_features_segmentation/segmentation_features_written": {
+      "metric": "json_numeric_min",
+      "artifact": "/workspace/output/agent/image_features/feature_summary.json",
+      "json_path": [
+        "segmentation_feature_count"
+      ],
+      "minimum": 1
+    },
+    "squidpy_spatial/execution/image_features_segmentation/integrated_feature_matrix_written": {
+      "metric": "all_checks",
+      "checks": [
+        {
+          "metric": "tsv_schema",
+          "artifact": "/workspace/output/agent/image_features/feature_matrix.tsv",
+          "required_columns": [
+            "obs_id"
+          ],
+          "min_rows": 100
+        },
+        {
+          "metric": "tsv_schema",
+          "artifact": "/workspace/output/agent/image_features/feature_clusters.tsv",
+          "required_columns": [
+            "obs_id",
+            "image_cluster"
+          ],
+          "min_rows": 100
+        }
+      ]
+    },
+    "squidpy_spatial/execution/interaction_reporting/interaction_analysis_executes": {
+      "metric": "all_checks",
+      "checks": [
+        {
+          "metric": "tsv_schema",
+          "artifact": "/workspace/output/agent/interactions/ligrec_ranked.tsv",
+          "required_columns": [
+            "rank",
+            "source",
+            "target",
+            "cluster_1",
+            "cluster_2",
+            "interaction_key",
+            "mean",
+            "pvalue"
+          ],
+          "min_rows": 1
+        },
+        {
+          "metric": "json_paths_present",
+          "artifact": "/workspace/output/agent/interactions/ligrec_summary.json",
+          "json_paths": [
+            [
+              "cluster_key"
+            ],
+            [
+              "n_input_pairs"
+            ],
+            [
+              "rank_metric"
+            ]
+          ]
+        }
+      ]
+    },
+    "squidpy_spatial/execution/interaction_reporting/visualization_report_written": {
+      "metric": "all_checks",
+      "checks": [
+        {
+          "metric": "artifact_exists",
+          "artifact": "/workspace/output/agent/visualizations/marker_localization.svg",
+          "contains": [
+            "<svg",
+            "Marker localization"
+          ],
+          "min_bytes": 200
+        },
+        {
+          "metric": "html_contains",
+          "artifact": "/workspace/output/agent/visualizations/report.html",
+          "contains": [
+            "Squidpy spatial reviewer-path report",
+            "spatial_stats_plot.svg",
+            "marker_localization.svg"
+          ],
+          "min_bytes": 400
+        }
+      ]
+    },
+    "squidpy_spatial/execution/datasets_and_containers/dataset_assets_loaded": {
+      "metric": "all_checks",
+      "checks": [
+        {
+          "metric": "json_paths_present",
+          "artifact": "/workspace/output/agent/dataset_manifest.json",
+          "json_paths": [
+            [
+              "datasets",
+              "visium_hne_adata",
+              "shape"
+            ],
+            [
+              "datasets",
+              "visium_hne_adata",
+              "cluster_key"
+            ],
+            [
+              "datasets",
+              "visium_hne_adata",
+              "cluster_labels"
+            ]
+          ]
+        },
+        {
+          "metric": "json_paths_present",
+          "artifact": "/workspace/output/agent/dataset_manifest.json",
+          "json_paths": [
+            [
+              "datasets",
+              "seqfish",
+              "shape"
+            ],
+            [
+              "datasets",
+              "seqfish",
+              "cluster_key"
+            ],
+            [
+              "datasets",
+              "seqfish",
+              "cluster_labels"
+            ]
+          ]
+        },
+        {
+          "metric": "json_paths_present",
+          "artifact": "/workspace/output/agent/dataset_manifest.json",
+          "json_paths": [
+            [
+              "datasets",
+              "visium_hne_image",
+              "sizes",
+              "x"
+            ],
+            [
+              "datasets",
+              "visium_hne_image",
+              "sizes",
+              "y"
+            ],
+            [
+              "datasets",
+              "visium_hne_image",
+              "sizes",
+              "channels"
+            ]
+          ]
+        }
+      ]
+    }
+  }
+}
