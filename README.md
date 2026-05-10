@@ -90,8 +90,8 @@ SCIREPLICBENCH_ENV_VARIANT=smoke python -m inspect_ai eval \
 
 The benchmark is designed for a two-stage evaluation to control cost:
 
-1. **Phase 4a — cheap pilot.** Run the full pipeline end-to-end on small / reasoning-light models (e.g., `gpt-4o-mini`, `claude-haiku`, `deepseek`) to validate rubric grading, Docker behavior, reproducer diffs, and tool use before committing to expensive runs.
-2. **Phase 4b — production.** Run the agent lineup decided from the pilot signal (typically `gpt-4o` + `claude-sonnet` with `o3-mini` as reasoning anchor; judge commonly `o3-mini` with `n=3` self-consistency on disagreements) across ≥3 seeds per paper and compile reliability + cost tables.
+1. **Phase 4a: cheap pilot.** Run the full pipeline end-to-end on small / reasoning-light models (e.g., `gpt-4o-mini`, `claude-haiku`, `deepseek`) to validate rubric grading, Docker behavior, reproducer diffs, and tool use before committing to expensive runs.
+2. **Phase 4b: production.** Run the agent lineup decided from the pilot signal (typically `gpt-4o` + `claude-sonnet` with `o3-mini` as reasoning anchor; judge commonly `o3-mini` with `n=3` self-consistency on disagreements) across ≥3 seeds per paper and compile reliability + cost tables.
 
 Skeleton plans for each phase live under `configs/` and `reports/phase4{a,b}_*`.
 
@@ -99,7 +99,7 @@ Skeleton plans for each phase live under `configs/` and `reports/phase4{a,b}_*`.
 
 ## Framing
 
-SciReplicBench measures **computational reproducibility of published findings** — not exact bit-level replication. Where the original paper used R/Seurat or another non-Python stack, the rubric targets the Python/scanpy-equivalent workflow and documents acceptable method substitutes in each paper's `method_equivalence.md`. Each paper also includes a `novel_contrast.json` that specifies a held-out contrast or annotation not present in the source paper, as an anti-memorization control for frontier models whose training data likely includes the original tutorials.
+SciReplicBench measures **computational reproducibility of published findings**: not exact bit-level replication. Where the original paper used R/Seurat or another non-Python stack, the rubric targets the Python/scanpy-equivalent workflow and documents acceptable method substitutes in each paper's `method_equivalence.md`. Each paper also includes a `novel_contrast.json` that specifies a held-out contrast or annotation not present in the source paper, as an anti-memorization control for frontier models whose training data likely includes the original tutorials.
 
 v1 is intended as a methodology prototype on three papers, not a general-purpose benchmark; scaling beyond three papers is explicit future work.
 
@@ -107,4 +107,4 @@ v1 is intended as a methodology prototype on three papers, not a general-purpose
 
 ## License and citation
 
-MIT — see [LICENSE](LICENSE). Citation metadata is provided in [CITATION.cff](CITATION.cff).
+MIT: see [LICENSE](LICENSE). Citation metadata is provided in [CITATION.cff](CITATION.cff).
