@@ -377,7 +377,7 @@ The `require_exact_ids: true` constraint still enforces all 2688 obs_ids exactly
 
 `194 passed` Cayuga regression confirms the change is non-breaking.
 
-### Stage 2 (deferred decision)
+### Stage 2 prompt intervention (2026-05-16)
 
 Three failures remain; all require watershed segmentation to actually execute at runtime:
 
@@ -385,7 +385,61 @@ Three failures remain; all require watershed segmentation to actually execute at
 - `result_match/segmentation_feature_count_band` (count within 5 ± 20%)
 - `result_match/texture_feature_rank_overlap` (top-10 RBO including segmentation_label)
 
-A prompt-side intervention (explicit watershed parameter recipe + smaller image crop suggestion to fit segmentation in budget) is the natural next step but requires a live eval to validate (≈$0.5, 15-60 min). Deferred pending budget approval.
+The unassisted prompt and public output contract now make the image-feature path explicitly two-pass:
+
+1. checkpoint a real non-segmentation matrix first (`histogram`, `summary`, `texture`; `copy=True`, `n_jobs=8`, `spot_scale=1.0`) and immediately write all four image-feature artifacts;
+2. attempt the exact watershed refinement with `sq.im.segment(image, layer='image', method='watershed', channel=0, chunks='auto', lazy=False, layer_added='segmented_watershed', copy=False)`, retrying without `chunks`/`lazy` only if that API path is unsupported;
+3. if watershed succeeds, overwrite the image-feature artifacts with the full 26-column benchmark-pinned `calculate_image_features(..., features=['histogram', 'segmentation', 'summary', 'texture'], ..., n_jobs=8, show_progress_bar=True, spot_scale=1.0)` recipe.
+
+This removes two ambiguities seen in run `2840243`: the agent used a bare `sq.im.segment(image, layer="image", method="watershed")` call, and it used the same timeout shape for both checkpoint and watershed refinement. The new wording keeps the durable partial-credit behavior while giving the agent a more reference-aligned path for recovering the final three segmentation-derived leaves.
+
+Validation status: Cayuga regression passed (`213 passed, 34 subtests passed`). Fresh live unassisted eval job `2953985` completed in 13m13s and showed the Stage 2 intervention worked mechanically: the agent wrote the two-pass checkpoint, ran watershed with `chunks="auto"`, produced 26 image-feature columns, and recovered the five segmentation-derived feature columns (`segmentation_feature_count=5`). The live score was `0.920` (`code_development=0.940`, `execution=0.890`, `result_match=0.922`), lower than the frozen Stage 1 rescore because the new run introduced unrelated schema/selection/ranking misses:
+
+- `moran_ranked.tsv` and `geary_ranked.tsv` renamed `pval_norm_fdr_bh` to aliases (`fdr_bh` / `pvalue`), failing schema leaves.
+- marker localization selected top Moran genes and included `Ttr` but dropped the paper-pinned `Olfm1`, failing marker/source and localization-pattern leaves.
+- `feature_ranking.tsv` ranked real image features by variance rather than the reference `sklearn.feature_selection.f_classif(..., adata.obs["cluster"])` statistic, failing top-10 RBO.
+- visualization artifacts were valid direct SVG/HTML outputs, but the code-development comparator only credited Matplotlib/helper AST calls.
+
+Follow-up patch (2026-05-16) now makes those expectations explicit in the unassisted prompt and public contract, and relaxes the visualization source-pattern comparator so direct SVG generation can receive code-development credit when the required files are produced. A future live eval should focus on whether these lightweight prompt/schema fixes recover the six remaining leaves; the watershed-specific Stage 2 question is already answered positively by job `2953985`.
+
+Frozen rescore of job `2953985` after the direct-SVG comparator relaxation: `overall=0.929` (`code_development=0.970`, `execution=0.890`, `result_match=0.922`; 22/23, 12/14, 19/21 leaves). The remaining five failed leaves are exactly the prompt/schema targets above: marker source selection, Moran/Geary FDR schema, spatial localization pattern, and image-feature F-statistic ranking.
+
+Fresh cost-approved live eval job `2954020` (2026-05-16) validated the follow-up prompt/schema fixes:
+
+- Official Inspect score: `overall=0.916`, `code_development=1.000`, `execution=0.863`, `result_match=0.890`, no severity caps.
+- Runtime: 22m16s Slurm wall time, Inspect total time 19m47s.
+- Token/cost: 1,681,551 total tokens; reported total cost `$1.44124845`.
+- Log: `logs-hpc/2026-05-17T01-11-48-00-00_scireplicbench_AVRTysyNCsKtsfKjN85kZy.eval`.
+- Recovered relative to job `2953985`: all 23 code-development leaves, `pval_norm_fdr_bh` schema, `Olfm1`/`Ttr` localization pattern, full watershed segmentation (`segmentation_feature_count=5`), and image-feature rank overlap (`RBO=1.0`).
+
+The remaining four failed leaves are now graph/export-contract issues rather than image-feature or marker issues:
+
+- `execution/spatial_graph_neighbors/cooccurrence_written`: `cooccurrence_curves.tsv` was header-only because the workflow caught a cooccurrence failure.
+- `result_match/spatial_graph_neighbors/cooccurrence_curve_overlap_threshold`: no aligned curves (`0 < 200`) due to the same empty table.
+- `result_match/spatial_graph_neighbors/interaction_matrix_overlap_threshold`: the workflow wrote `interaction_count`, but the comparator expects value column `count`.
+- `execution/interaction_reporting/interaction_analysis_executes`: `ligrec_summary.json` omitted required metadata keys `cluster_key` and `rank_metric`.
+
+Follow-up prompt/contract patch now explicitly requires reference-style cooccurrence flattening (`radius_index`, `radius_start`, `radius_end` from returned `intervals`), `interaction_matrix.tsv` value column `count`, and `ligrec_summary.json` keys `cluster_key: "cluster"` plus `rank_metric: "mean descending"`.
+
+Fresh live eval job `2954125` (2026-05-16) validated those graph/export fixes:
+
+- Official Inspect score: `overall=0.984`, `code_development=1.000`, `execution=1.000`, `result_match=0.964`, no severity caps.
+- Runtime/cost: Slurm 14m49s, Inspect 13m28s, 1,338,942 total tokens, reported cost `$1.0658274000000003`.
+- Log: `logs-hpc/2026-05-17T03-00-16-00-00_scireplicbench_6vT4SpHafpUe9txcPFbEoC.eval`.
+- Recovered relative to job `2954020`: cooccurrence table execution/result, interaction-matrix result, ligrec summary execution, and all execution leaves (`14/14`).
+- Remaining failed leaf: `result_match/image_features_segmentation/image_feature_cluster_alignment_ari`, observed ARI `0.157858` vs threshold `0.25`.
+
+Post-run diagnosis showed the artifact's full 26-column feature matrix is sufficient: recomputing `feature_clusters.tsv` with the benchmark reference clustering recipe (`StandardScaler` on numeric image features, then `KMeans(n_clusters=5, random_state=0, n_init=10)`) gives ARI `1.0` on the frozen job `2954125` features. The agent instead fit KMeans on unscaled raw features and selected `n_clusters=4`, which passes nondegeneracy but misses the reference cluster alignment. The prompt/contract now explicitly require the scaled 5-cluster recipe.
+
+Final live eval job `2954539` (2026-05-16) validated the scaled 5-cluster image-feature recipe and reached full unassisted credit:
+
+- Official Inspect score: `overall=1.000`, `code_development=1.000`, `execution=1.000`, `result_match=1.000`, no severity caps.
+- Leaves: `58/58` passed; failed leaves `0`.
+- Runtime/cost: Slurm 16m45s, Inspect 16m13s, 1,338,070 total tokens, reported cost `$1.3992315`.
+- Log: `logs-hpc/2026-05-17T03-21-06-00-00_scireplicbench_oMNgzYCkeK3SSeNx5oTEKe.eval`.
+- Output check: final artifact tree includes full graph/statistics/image/interaction/visualization outputs, `submission_manifest.json`, and `ligrec_summary.json` with `cluster_key`, `n_input_pairs`, `n_perms`, `significant_count_p_le_0_05`, and `rank_metric`.
+
+This closes Phase B-4b for the Squidpy unassisted path: the prompt/contract now reliably steers Sonnet 4.6 to the complete benchmark-aligned reproduction under the Cayuga offline environment.
 
 ## Remaining Human/Data Inputs
 

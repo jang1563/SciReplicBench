@@ -128,12 +128,13 @@ class TaskConfigTest(unittest.TestCase):
                     self.assertIn(snippet, surface_text)
 
         prompt_snippets = [
-            "sq.im.segment(image, layer='image', method='watershed', channel=0, layer_added='segmented_watershed', copy=False)",
+            "sq.im.segment(image, layer='image', method='watershed', channel=0, chunks='auto', lazy=False, layer_added='segmented_watershed', copy=False)",
             "features=['histogram', 'segmentation', 'summary', 'texture']",
             "'histogram': {'channels': [0], 'bins': 4}",
             "'segmentation': {'label_layer': 'segmented_watershed', 'props': ['label', 'area', 'mean_intensity'], 'channels': [0]}",
             "'summary': {'channels': [0, 1, 2]}",
             "'texture': {'channels': [0], 'props': ['contrast', 'homogeneity'], 'distances': [1], 'angles': [0]}",
+            "copy=True, n_jobs=8, show_progress_bar=True, spot_scale=1.0",
         ]
         for snippet in prompt_snippets:
             self.assertIn(snippet, prompt)
@@ -322,13 +323,18 @@ class TaskConfigTest(unittest.TestCase):
         self.assertIn("returns `(zscore, count)`", sample.input)
         self.assertIn("do not use `np.column_stack`", sample.input)
         self.assertIn("sq.gr.spatial_autocorr(..., mode='moran'", sample.input)
+        self.assertIn("Preserve the exact `pval_norm_fdr_bh` column", sample.input)
         self.assertIn("sq.gr.ripley(seqfish, cluster_key='celltype_mapped_refined'", sample.input)
         self.assertIn("sq.im.calculate_image_features(adata, image", sample.input)
-        self.assertIn("attempt watershed segmentation FIRST", sample.input)
+        self.assertIn("use a durable two-pass pattern", sample.input)
+        self.assertIn("First checkpoint a real non-segmentation matrix", sample.input)
+        self.assertIn("chunks='auto'", sample.input)
+        self.assertIn("do not replace it with a bare `sq.im.segment(image, method='watershed')` call", sample.input)
         self.assertIn("Do not let image feature extraction block final scoring", sample.input)
         self.assertIn("signal.alarm", sample.input)
         self.assertIn("checking elapsed time after `sq.im.segment` returns is not enough", sample.input)
         self.assertIn("features=['histogram', 'segmentation', 'summary', 'texture']", sample.input)
+        self.assertIn("copy=True, n_jobs=8, show_progress_bar=True, spot_scale=1.0", sample.input)
         self.assertIn("sq.gr.ligrec(..., cluster_key='cluster'", sample.input)
         self.assertIn("n_perms=10", sample.input)
         self.assertIn("only rerun with `n_perms=100`", sample.input)
@@ -341,7 +347,12 @@ class TaskConfigTest(unittest.TestCase):
         self.assertIn("flat payloads such as", sample.input)
         self.assertIn("nhood and interaction matrix `pair_key` should be `cluster_1|cluster_2`", sample.input)
         self.assertIn("cooccurrence `pair_key` should be `cluster_1->cluster_2`", sample.input)
+        self.assertIn("name the numeric value column exactly `count`", sample.input)
         self.assertIn("interval=25", sample.input)
+        self.assertIn("radius_index, value in enumerate(cooccurrence[i, j, :])", sample.input)
+        self.assertIn("radius_start=intervals[radius_index]", sample.input)
+        self.assertIn("do not write only `radius`", sample.input)
+        self.assertIn("empty header-only TSV", sample.input)
         self.assertIn("groupby('label').cumcount()", sample.input)
         self.assertIn("significant_gene_count", sample.input)
         self.assertIn("create every required subdirectory", sample.input)
@@ -356,17 +367,26 @@ class TaskConfigTest(unittest.TestCase):
         self.assertIn("Squidpy spatial reviewer-path report", sample.input)
         self.assertIn("sort the executed custom-panel interaction table by mean descending", sample.input)
         self.assertIn("source|target|cluster_1->cluster_2", sample.input)
+        self.assertIn("`cluster_key: 'cluster'`", sample.input)
+        self.assertIn("`rank_metric: 'mean descending'`", sample.input)
         self.assertIn("Treat `n_perms=100` as optional refinement", sample.input)
         self.assertIn("Do not leave placeholder sections", sample.input)
-        self.assertIn("attempt watershed segmentation FIRST", sample.input)
-        self.assertIn("Skipping `sq.im.segment` entirely will fail", sample.input)
+        self.assertIn("After that checkpoint exists", sample.input)
+        self.assertIn("the exact `sq.im.segment(..., channel=0, layer_added='segmented_watershed', copy=False)` call", sample.input)
         self.assertIn("'histogram': {'channels': [0], 'bins': 4}", sample.input)
         self.assertIn("'segmentation': {'label_layer': 'segmented_watershed'", sample.input)
         self.assertIn("'texture': {'channels': [0], 'props': ['contrast', 'homogeneity']", sample.input)
         self.assertIn("`feature_families: ['fallback']`", sample.input)
         self.assertIn("`n_features >= 20`", sample.input)
-        self.assertIn("at least 3 distinct `image_cluster` values", sample.input)
+        self.assertIn("StandardScaler().fit_transform", sample.input)
+        self.assertIn("KMeans(n_clusters=5, random_state=0, n_init=10)", sample.input)
+        self.assertIn("Do not fit KMeans on unscaled raw features", sample.input)
+        self.assertIn("do not switch to `n_clusters=4`", sample.input)
         self.assertIn("`fallback_feature_0`", sample.input)
+        self.assertIn("from sklearn.feature_selection import f_classif", sample.input)
+        self.assertIn("Rank `feature_ranking.tsv` by cluster-separation F statistic", sample.input)
+        self.assertIn("not raw variance", sample.input)
+        self.assertIn("Always include both paper-pinned marker genes `Olfm1` and `Ttr`", sample.input)
         self.assertIn("Write `submission_manifest.json` with `json.dump`", sample.input)
         self.assertIn("real `/workspace/submission/main_analysis.py`", sample.input)
         self.assertIn("do not embed the substantive workflow", sample.input)

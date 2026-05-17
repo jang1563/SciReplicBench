@@ -348,6 +348,44 @@ class ScorerTest(unittest.TestCase):
         self.assertTrue(judgement.metadata["deterministic_code_development"])
         self.assertTrue(judgement.metadata["starter_assisted"])
 
+    def test_direct_svg_visualization_source_patterns_do_not_require_matplotlib(self) -> None:
+        leaf = {
+            "id": "demo/code_development/generate_spatial_visualizations",
+            "category": "code_development",
+            "requirement": "Generate spatial visualization artifacts.",
+        }
+        reference = {
+            "strict_code_development": True,
+            "source_candidates": ["/workspace/submission/pipeline.py"],
+            "leaves": {
+                "demo/code_development/generate_spatial_visualizations": {
+                    "metric": "source_patterns",
+                    "all_literals": [
+                        "spatial_stats_plot.svg",
+                        "marker_localization.svg",
+                    ],
+                }
+            },
+        }
+        source = (
+            "from pathlib import Path\n"
+            "Path('visualizations/spatial_stats_plot.svg').write_text('<svg><title>Top Moran</title></svg>')\n"
+            "Path('visualizations/marker_localization.svg').write_text('<svg><title>Marker localization</title></svg>')\n"
+        )
+        with patch.object(
+            scorers,
+            "load_code_development_reference",
+            return_value=reference,
+        ), patch.object(scorers, "_read_sandbox_file", AsyncMock(return_value=source)):
+            judgement = asyncio.run(
+                _deterministic_code_development_judgement(leaf, paper_id="demo")
+            )
+
+        self.assertIsNotNone(judgement)
+        assert judgement is not None
+        self.assertEqual(judgement.score, 1)
+        self.assertEqual(judgement.metadata["expected"].get("any_ast_calls", []), [])
+
     def test_match_literals_accepts_flipped_quote_style(self) -> None:
         leaf = {
             "id": "demo/code_development/source_leaf",

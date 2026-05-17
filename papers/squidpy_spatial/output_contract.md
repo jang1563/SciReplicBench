@@ -108,11 +108,11 @@ For ligand-receptor analysis, use the staged 16-pair panel at `data/ligrec_inter
 
 If ligand-receptor permutations exceed the remaining runtime, still write an executed interaction summary based on the completed custom-panel mean table and record the bounded setting or timeout in `ligrec_summary.json`. This fallback will not necessarily receive full result-match credit, but it keeps the submission executable and scientifically inspectable.
 
-Image features can also be slow on shared HPC nodes. Run the benchmark-standard image-feature recipe when feasible, but do not let it block final scoring. A robust implementation may first checkpoint non-segmentation features such as `['histogram', 'summary', 'texture']` (which together produce roughly 20-26 real columns and is the minimum credible feature matrix), write the four image-feature artifacts, and then attempt watershed segmentation plus a full overwrite/refinement. Wrap each long image call with a real Python timeout such as `signal.alarm(...)`; checking elapsed time after a call returns does not stop a hanging `sq.im.segment` or `sq.im.calculate_image_features` call. If the full `['histogram', 'segmentation', 'summary', 'texture']` recipe exceeds the remaining runtime, keep the smaller executed feature matrix from the checkpointed step (which already has real values) and record the actual `feature_families` and timeout status in `feature_summary.json`, then continue to visualizations and manifests.
+Image features can also be slow on shared HPC nodes. Run the benchmark-standard image-feature recipe when feasible, but do not let it block final scoring. A robust implementation should first checkpoint non-segmentation features with `features=['histogram', 'summary', 'texture']`, the benchmark-pinned histogram/summary/texture kwargs below, `copy=True`, `n_jobs=8`, and `spot_scale=1.0`; write the four image-feature artifacts from that checkpoint before attempting watershed. Then attempt watershed segmentation plus a full overwrite/refinement. Wrap each long image call with a real Python timeout such as `signal.alarm(...)`; checking elapsed time after a call returns does not stop a hanging `sq.im.segment` or `sq.im.calculate_image_features` call. If the full `['histogram', 'segmentation', 'summary', 'texture']` recipe exceeds the remaining runtime, keep the smaller executed feature matrix from the checkpointed step (which already has real values) and record the actual `feature_families` and timeout status in `feature_summary.json`, then continue to visualizations and manifests.
 
-A placeholder fallback is **not acceptable**. Specifically, do not write a `feature_summary.json` whose `feature_families` is `["fallback"]`, whose `status` is `"fallback_placeholder"`, or whose `feature_matrix.tsv` columns are named `fallback_feature_*` with all zero variance. Likewise, `feature_clusters.tsv` must have at least 3 distinct `image_cluster` values with no single cluster containing more than 60% of observations; assigning every `obs_id` to cluster `0` will fail the `image_feature_structure_nondegenerate` check. Concretely, even when watershed segmentation cannot run, the `histogram`/`summary`/`texture` matrix already gives real `texture_ch-*`, `summary_ch-*`, and `histogram_ch-*` columns; KMeans on those columns with `n_clusters=4` and a fixed `random_state` gives non-degenerate clusters, and `segmentation_feature_count` should then truthfully report `0`. Placeholder feature names like `fallback_feature_0` will fail every image-feature result-match leaf simultaneously.
+A placeholder fallback is **not acceptable**. Specifically, do not write a `feature_summary.json` whose `feature_families` is `["fallback"]`, whose `status` is `"fallback_placeholder"`, or whose `feature_matrix.tsv` columns are named `fallback_feature_*` with all zero variance. Likewise, `feature_clusters.tsv` must have at least 3 distinct `image_cluster` values with no single cluster containing more than 60% of observations; assigning every `obs_id` to cluster `0` will fail the `image_feature_structure_nondegenerate` check. Concretely, even when watershed segmentation cannot run, the `histogram`/`summary`/`texture` matrix already gives real `texture_ch-*`, `summary_ch-*`, and `histogram_ch-*` columns; a scaled KMeans clustering on those columns gives non-degenerate clusters, and `segmentation_feature_count` should then truthfully report `0`. Placeholder feature names like `fallback_feature_0` will fail every image-feature result-match leaf simultaneously.
 
-The benchmark-pinned image-feature recipe expects exactly 26 feature columns. To match this shape, first create the segmentation layer and then call `sq.im.calculate_image_features` with the same `features_kwargs` used by the hidden reference generator:
+The benchmark-pinned image-feature recipe expects exactly 26 feature columns. To match this shape, first create the segmentation layer and then call `sq.im.calculate_image_features` with the same `features_kwargs` used by the hidden reference generator. The refinement call should be attempted after the non-segmentation checkpoint has already been written:
 
 ```python
 sq.im.segment(
@@ -120,6 +120,8 @@ sq.im.segment(
     layer="image",
     method="watershed",
     channel=0,
+    chunks="auto",
+    lazy=False,
     layer_added="segmented_watershed",
     copy=False,
 )
@@ -145,10 +147,13 @@ sq.im.calculate_image_features(
         },
     },
     copy=True,
+    n_jobs=8,
+    show_progress_bar=True,
+    spot_scale=1.0,
 )
 ```
 
-Default `features_kwargs` expands texture into many distance/angle combinations and produces ~100+ off-shape columns that fail `image_feature_matrix_dimensionality_band` (currently a 25% band around 26 columns) and `texture_feature_rank_overlap` (top-10 RBO against names that include `dist-1` and `angle-0.00`). Run `sq.im.segment(image, layer="image", method="watershed", channel=0, layer_added="segmented_watershed", copy=False)` BEFORE the full `calculate_image_features` call so the segmentation label layer exists; if segmentation itself fails, leave the `sq.im.segment` call in the saved source and let the histogram/summary/texture checkpoint complete.
+Default `features_kwargs` expands texture into many distance/angle combinations and produces ~100+ off-shape columns that fail `image_feature_matrix_dimensionality_band` (currently a 25% band around 26 columns) and `texture_feature_rank_overlap` (top-10 RBO against names that include `dist-1` and `angle-0.00`). Run `sq.im.segment(image, layer="image", method="watershed", channel=0, chunks="auto", lazy=False, layer_added="segmented_watershed", copy=False)` before the full `calculate_image_features` refinement so the segmentation label layer exists. If `chunks="auto"` is unsupported, retry the same benchmark-pinned call without `chunks`/`lazy`. Avoid bare calls such as `sq.im.segment(image, method="watershed")`, because they are harder for deterministic checks to distinguish from an incomplete attempt. If segmentation itself fails, leave the exact segmentation call in the saved source and keep the histogram/summary/texture checkpoint.
 
 When flattening `sq.gr.ligrec` output, the `interaction_key` must include both genes and both clusters:
 
@@ -172,6 +177,33 @@ Use these exact key conventions for result-match-ready graph tables:
 
 For cooccurrence, prefer the benchmark-standard integer interval setting `interval=25` and export the intervals returned by Squidpy. Avoid replacing it with an arbitrary `np.linspace(...)`, because that shifts the reference radii.
 
+Flatten cooccurrence exactly as interval-binned curves, not as a single `radius` column:
+
+```python
+cooccurrence, intervals = sq.gr.co_occurrence(
+    visium,
+    cluster_key="cluster",
+    interval=25,
+    copy=True,
+    n_jobs=n_jobs,
+    show_progress_bar=True,
+)
+for radius_index, value in enumerate(cooccurrence[i, j, :]):
+    row = {
+        "cluster_1": left,
+        "cluster_2": right,
+        "pair_key": f"{left}->{right}",
+        "radius_index": radius_index,
+        "radius_start": float(intervals[radius_index]),
+        "radius_end": float(intervals[radius_index + 1]),
+        "cooccurrence": float(value),
+    }
+```
+
+Do not catch a failed cooccurrence call and emit an empty header-only `cooccurrence_curves.tsv`; that keeps the workflow alive but necessarily fails both execution and result-match checks. Let the real exception guide a repair, or write a completed table from the returned arrays.
+
+For interaction matrices, the value column must be named `count`, not `interaction_count`.
+
 For Ripley L, flatten `ripley["L_stat"]` directly, rename `bins` to `radius`, rename `celltype_mapped_refined` to `label`, rename `stats` to `ripley_l`, sort by `label` and `radius`, then set `radius_index` with `groupby("label").cumcount()`. Do not use the global row number as `radius_index`.
 
 Recommended minimum columns:
@@ -180,13 +212,13 @@ Recommended minimum columns:
 - `neighborhood/centrality_scores.tsv`: `cluster` plus centrality metric columns
 - `neighborhood/cooccurrence_curves.tsv`: `cluster_1`, `cluster_2`, `pair_key`, `radius_index`, `radius_start`, `radius_end`, `cooccurrence`
 - `neighborhood/interaction_matrix.tsv`: `cluster_1`, `cluster_2`, `pair_key`, `count`
-- `autocorrelation/moran_ranked.tsv`: `rank`, `gene`, `moran_i`, p-value/FDR columns when available
-- `autocorrelation/geary_ranked.tsv`: `rank`, `gene`, `geary_c`, p-value/FDR columns when available
+- `autocorrelation/moran_ranked.tsv`: `rank`, `gene`, `moran_i`, `pval_norm_fdr_bh`
+- `autocorrelation/geary_ranked.tsv`: `rank`, `gene`, `geary_c`, `pval_norm_fdr_bh`
 - `spatial_stats/ripley_curves.tsv`: `label`, `radius_index`, `radius`, `ripley_l`
 - `spatial_stats/svg_summary.json`: `method`, `fdr_column`, `fdr_threshold`, `significant_gene_count`
 - `spatial_stats/gene_localization.tsv`: `gene`, `cluster`, `localization_key`, `mean_expression`; use `localization_key = gene|cluster`
 - `image_features/feature_matrix.tsv`: `obs_id` plus image feature columns
-- `image_features/feature_ranking.tsv`: `rank`, `feature`, ranking statistic columns
+- `image_features/feature_ranking.tsv`: `rank`, `feature`, `f_statistic`, `p_value`
 - `image_features/feature_clusters.tsv`: `obs_id`, `image_cluster`
 - `image_features/feature_summary.json`: `n_observations`, `n_features`, `segmentation_feature_count`, `cluster_counts`, `feature_families`, and optional `status` / `timeout_seconds`
 - `interactions/ligrec_ranked.tsv`: `rank`, `source`, `target`, `cluster_1`, `cluster_2`, `interaction_key`, `mean`, `pvalue`
@@ -206,6 +238,35 @@ Recommended minimum columns:
 ```
 
 Use `n_perms=100` in this summary only if that call actually completed.
+
+For autocorrelation exports, preserve Squidpy's FDR column name exactly when present: both `autocorrelation/moran_ranked.tsv` and `autocorrelation/geary_ranked.tsv` should include `pval_norm_fdr_bh` alongside `rank`, `gene`, and the normalized statistic (`moran_i` or `geary_c`). Adding friendlier aliases such as `fdr_bh` or `pvalue` is acceptable, but replacing `pval_norm_fdr_bh` with only an alias will fail deterministic schema checks.
+
+For `spatial_stats/gene_localization.tsv` and `visualizations/marker_localization.svg`, always include the paper-pinned marker genes `Olfm1` and `Ttr`. You may add top Moran genes as additional rows, but do not let a purely top-ranked selection drop either marker gene.
+
+For `image_features/feature_ranking.tsv`, rank the executed feature columns by cluster-separation F statistic against Visium `adata.obs["cluster"]`, matching the benchmark reference generator:
+
+```python
+from sklearn.feature_selection import f_classif
+
+labels = adata.obs.loc[features.index, "cluster"].astype(str)
+f_values, p_values = f_classif(numeric_features, labels)
+```
+
+Sort by `f_statistic` descending and include `p_value` if available. Do not rank image features by raw variance alone; variance ranking can recover real feature names but will usually miss the reference top-10 ordering.
+
+For `image_features/feature_clusters.tsv`, use the benchmark reference clustering recipe on the executed numeric image-feature matrix:
+
+```python
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+
+numeric = features.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+scaled = StandardScaler().fit_transform(numeric)
+clusters = KMeans(n_clusters=5, random_state=0, n_init=10).fit_predict(scaled)
+image_cluster = [f"image_cluster_{value}" for value in clusters]
+```
+
+Do not fit KMeans directly on unscaled raw feature values, and do not switch the full 26-column recipe to `n_clusters=4`. Raw 4-cluster KMeans can look nondegenerate but still fail the ARI alignment leaf.
 
 ## Execution Guardrails
 

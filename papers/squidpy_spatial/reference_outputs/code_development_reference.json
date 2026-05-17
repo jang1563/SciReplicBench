@@ -228,12 +228,6 @@
       "all_literals": [
         "spatial_stats_plot.svg",
         "marker_localization.svg"
-      ],
-      "any_ast_calls": [
-        "plt.savefig",
-        "fig.savefig",
-        "_write_svg_barplot",
-        "_write_marker_localization_svg"
       ]
     },
     "squidpy_spatial/code_development/interaction_reporting/export_reproducible_summary": {
